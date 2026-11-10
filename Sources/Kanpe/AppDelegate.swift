@@ -198,8 +198,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             warning.isEnabled = false
             menu.addItem(warning)
             menu.addItem(item("Open Accessibility Settings…", #selector(grantAccess)))
-            for line in ["Turn on Kanpe in the list. If it's already on,",
-                         "select it, click −, then add Kanpe again."] {
+            menu.addItem(item("Reset Permission and Ask Again", #selector(resetAccess)))
+            for line in ["If Kanpe is already switched on but this warning stays,",
+                         "the entry is from an older build: use Reset Permission."] {
                 let hint = NSMenuItem(title: line, action: nil, keyEquivalent: "")
                 hint.isEnabled = false
                 hint.indentationLevel = 1
@@ -273,6 +274,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let i = NSMenuItem(title: title, action: action, keyEquivalent: key)
         i.target = self
         return i
+    }
+
+    /// Deletes Kanpe's Accessibility entry and asks again. Fixes an entry that was granted to
+    /// an older build: toggling such an entry in System Settings has no effect, and removing it
+    /// there isn't always possible.
+    @objc private func resetAccess() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        task.arguments = ["reset", "Accessibility", Bundle.main.bundleIdentifier ?? "dev.victorzhu.Kanpe"]
+        do {
+            try task.run()
+            task.waitUntilExit()
+            Log.app.notice("tccutil reset exited with \(task.terminationStatus)")
+        } catch {
+            Log.app.error("tccutil reset failed: \(error.localizedDescription, privacy: .public)")
+        }
+        grantAccess()
     }
 
     @objc private func grantAccess() {
