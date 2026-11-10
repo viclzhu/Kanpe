@@ -1,0 +1,52 @@
+{
+  "name": "GitHub",
+  "match": ["github.com"],
+  "groups": [
+    {
+      "title": "Site-wide",
+      "shortcuts": [
+        { "title": "Focus search", "keys": "/" },
+        { "title": "Open command palette", "keys": "cmd+k" },
+        { "title": "Show all keyboard shortcuts", "keys": "?" },
+        { "title": "Go to notifications", "keys": "g n" },
+        { "title": "Go to dashboard", "keys": "g d" }
+      ]
+    },
+    {
+      "title": "Repository",
+      "shortcuts": [
+        { "title": "Go to Code", "keys": "g c" },
+        { "title": "Go to Issues", "keys": "g i" },
+        { "title": "Go to Pull requests", "keys": "g p" },
+        { "title": "Go to Actions", "keys": "g a" },
+        { "title": "Go to Projects", "keys": "g b" },
+        { "title": "Go to Wiki", "keys": "g w" },
+        { "title": "Go to Discussions", "keys": "g g" },
+        { "title": "Open in github.dev editor", "keys": "." }
+      ]
+    },
+    {
+      "title": "Code",
+      "shortcuts": [
+        { "title": "Find file", "keys": "t" },
+        { "title": "Switch branch or tag", "keys": "w" },
+        { "title": "Jump to line", "keys": "l" },
+        { "title": "Permalink to this version", "keys": "y" },
+        { "title": "Open blame", "keys": "b" }
+      ]
+    },
+    {
+      "title": "Issues & PRs",
+      "shortcuts": [
+        { "title": "Create issue (in Issues tab)", "keys": "c" },
+        { "title": "Set assignee", "keys": "a" },
+        { "title": "Set labels", "keys": "l" },
+        { "title": "Set milestone", "keys": "m" },
+        { "title": "Request reviewer", "keys": "q" },
+        { "title": "Quote selection in reply", "keys": "r" },
+        { "title": "Submit comment", "keys": "cmd+enter" },
+        { "title": "Toggle write / preview", "keys": "shift+cmd+p" }
+      ]
+    }
+  ]
+}

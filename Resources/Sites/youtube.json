@@ -1,0 +1,33 @@
+{
+  "name": "YouTube",
+  "match": ["youtube.com", "m.youtube.com"],
+  "groups": [
+    {
+      "title": "Playback",
+      "shortcuts": [
+        { "title": "Play / pause", "keys": "k" },
+        { "title": "Back 10 seconds", "keys": "j" },
+        { "title": "Forward 10 seconds", "keys": "l" },
+        { "title": "Back / forward 5 seconds", "keys": "left or right" },
+        { "title": "Volume up / down", "keys": "up or down" },
+        { "title": "Mute", "keys": "m" },
+        { "title": "Seek to 0–90%", "keys": "0-9" },
+        { "title": "Previous / next frame (paused)", "keys": ", or ." },
+        { "title": "Slower / faster", "keys": "< or >" },
+        { "title": "Next video", "keys": "shift+n" },
+        { "title": "Previous video (playlist)", "keys": "shift+p" }
+      ]
+    },
+    {
+      "title": "View",
+      "shortcuts": [
+        { "title": "Full screen", "keys": "f" },
+        { "title": "Theater mode", "keys": "t" },
+        { "title": "Miniplayer", "keys": "i" },
+        { "title": "Captions on / off", "keys": "c" },
+        { "title": "Search", "keys": "/" },
+        { "title": "Show keyboard shortcuts", "keys": "?" }
+      ]
+    }
+  ]
+}

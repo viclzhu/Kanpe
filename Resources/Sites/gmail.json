@@ -1,0 +1,41 @@
+{
+  "name": "Gmail",
+  "match": ["mail.google.com"],
+  "groups": [
+    {
+      "title": "Compose & find",
+      "shortcuts": [
+        { "title": "Compose", "keys": "c" },
+        { "title": "Search mail", "keys": "/" },
+        { "title": "Send (in compose)", "keys": "cmd+enter" },
+        { "title": "Show keyboard shortcuts", "keys": "?" }
+      ]
+    },
+    {
+      "title": "Conversations",
+      "shortcuts": [
+        { "title": "Newer / older conversation", "keys": "k or j" },
+        { "title": "Open conversation", "keys": "o" },
+        { "title": "Back to list", "keys": "u" },
+        { "title": "Select conversation", "keys": "x" },
+        { "title": "Archive", "keys": "e" },
+        { "title": "Delete", "keys": "#" },
+        { "title": "Reply", "keys": "r" },
+        { "title": "Reply all", "keys": "a" },
+        { "title": "Forward", "keys": "f" },
+        { "title": "Star", "keys": "s" },
+        { "title": "Mark as read", "keys": "shift+i" },
+        { "title": "Mark as unread", "keys": "shift+u" }
+      ]
+    },
+    {
+      "title": "Go to",
+      "shortcuts": [
+        { "title": "Inbox", "keys": "g i" },
+        { "title": "Starred", "keys": "g s" },
+        { "title": "Sent", "keys": "g t" },
+        { "title": "Drafts", "keys": "g d" }
+      ]
+    }
+  ]
+}
