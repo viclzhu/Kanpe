@@ -4,12 +4,12 @@ A macOS menu-bar app that shows the keyboard shortcuts for whatever you're using
 
 The name comes from カンペ (*kanpe*), Japanese TV slang for the cue cards held up off camera.
 
-Hold `⌘` for a moment and a panel appears with:
+Press `⌘` twice and keep holding (or, if you prefer, just hold `⌘`; choose under menu-bar icon → **Trigger**) and a panel appears with:
 
 1. **Site shortcuts** for the active tab (GitHub, Gmail, YouTube… or any site you add), highlighted at the top.
 2. **App shortcuts** read live from the frontmost app's menu bar.
 
-Release `⌘` (or press any key) to dismiss it.
+Release `⌘` (or press any key) to dismiss it. Shortcuts you type with `⌘` (⌘C, ⌘Tab, ⌘-click…) never trigger it.
 
 ## Build & run
 
@@ -74,8 +74,8 @@ Firefox only works through Accessibility, and how reliable that is depends on th
 ## Layout
 
 ```
-Sources/KanpeCore     pure logic: models, key notation, site matching, pack loading, column layout
-Sources/Kanpe         app: activation (hold ⌘), Accessibility menu + URL reading, panel UI, menu-bar item
+Sources/KanpeCore     pure logic: models, key notation, site matching, pack loading, column layout, trigger gesture
+Sources/Kanpe         app: activation (event monitors → trigger state machine), Accessibility menu + URL reading, panel UI, menu-bar item
 Sources/KanpeSelfTest assertion checks for KanpeCore
 Resources/Sites         bundled site packs
 scripts/bundle.sh       builds and signs Kanpe.app

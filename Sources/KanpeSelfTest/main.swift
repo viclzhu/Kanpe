@@ -62,6 +62,34 @@ check(cols.flatMap { $0 }, [10, 10, 10, 10], "order preserved")
 check(ColumnLayout.columns([50], rows: { $0 }, maxColumns: 4, targetRowsPerColumn: 10).count, 1, "never more columns than groups")
 check(ColumnLayout.columns([5, 5, 5], rows: { $0 }, maxColumns: 1, targetRowsPerColumn: 5).count, 1, "respects maxColumns")
 
+// MARK: Trigger gestures
+func run(_ mode: TriggerMode, _ events: [TriggerStateMachine.Event]) -> [TriggerStateMachine.Effect] {
+    var m = TriggerStateMachine(mode: mode, holdDelay: 0.6)
+    return events.flatMap { m.handle($0) }
+}
+typealias E = TriggerStateMachine.Event
+
+// Hold ⌘
+check(run(.hold, [.commandDown(0), .timerFired]), [.begin, .scheduleShow(after: 0.6), .show], "hold shows")
+check(run(.hold, [.commandDown(0), .timerFired, .commandUp(2)]), [.begin, .scheduleShow(after: 0.6), .show, .hide], "release hides")
+check(run(.hold, [.commandDown(0), .otherInput, .timerFired]), [.begin, .scheduleShow(after: 0.6), .cancelScheduledShow], "⌘C cancels")
+check(run(.hold, [.commandDown(0), .commandUp(0.2), .timerFired]), [.begin, .scheduleShow(after: 0.6), .cancelScheduledShow], "early release cancels")
+check(run(.hold, [.commandDown(0), .timerFired, .otherInput]), [.begin, .scheduleShow(after: 0.6), .show, .hide], "key while shown hides")
+
+// Press ⌘ twice and hold
+let armed: [TriggerStateMachine.Effect] = [.begin, .scheduleShow(after: 0.15)]
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(0.25), .timerFired]), armed + [.show], "double tap + hold shows")
+check(run(.doubleTapHold, [.commandDown(0), .timerFired]), [], "single hold does nothing")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(0.25), .commandUp(0.3), .timerFired]),
+      armed + [.cancelScheduledShow], "double tap without hold does nothing")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.5), .commandDown(0.6), .timerFired]), [], "first press too long")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(1.0), .timerFired]), [], "gap too long")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(1.0), .commandUp(1.1), .commandDown(1.3), .timerFired]),
+      armed + [.show], "slow press restarts as a new first tap")
+check(run(.doubleTapHold, [.commandDown(0), .otherInput, .commandDown(0.2), .timerFired]), [], "⌘C then ⌘ is not a double tap")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .otherInput, .commandDown(0.2), .timerFired]), [], "key between taps cancels")
+check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(0.25), .timerFired, .commandUp(3)]), armed + [.show, .hide], "release hides")
+
 // MARK: Bundled packs parse and render
 let sitesDir = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

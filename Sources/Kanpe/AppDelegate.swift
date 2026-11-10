@@ -2,7 +2,7 @@ import AppKit
 import KanpeCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let monitor = ActivationMonitor()
+    private let monitor: ActivationMonitor
     private let panel = PanelController()
     private let store = SitePackStore(directory: SitePackStore.defaultDirectory)
     private var packs: [SitePack] = []
@@ -16,14 +16,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wantsShow = false
 
     private let defaults = UserDefaults.standard
+
+    override init() {
+        defaults.register(defaults: ["holdDelay": 0.6, "triggerMode": TriggerMode.doubleTapHold.rawValue])
+        let mode = TriggerMode(rawValue: defaults.string(forKey: "triggerMode") ?? "") ?? .doubleTapHold
+        monitor = ActivationMonitor(mode: mode, holdDelay: defaults.double(forKey: "holdDelay"))
+        super.init()
+    }
+
     private var useAppleScriptFallback: Bool {
         get { defaults.object(forKey: "useAppleScriptFallback") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "useAppleScriptFallback") }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        defaults.register(defaults: ["holdDelay": 0.6])
-        monitor.holdDelay = defaults.double(forKey: "holdDelay")
         reloadPacks(installDefaults: true)
         setUpStatusItem()
 
@@ -123,7 +129,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildMenu() {
         let menu = NSMenu()
-        let hint = NSMenuItem(title: "Hold ⌘ to show shortcuts", action: nil, keyEquivalent: "")
+        menu.autoenablesItems = false // so isEnabled = false on info rows and Hold Delay sticks
+        let hint = NSMenuItem(title: "\(monitor.mode.title) to show shortcuts", action: nil, keyEquivalent: "")
         hint.isEnabled = false
         menu.addItem(hint)
         menu.addItem(.separator())
@@ -144,7 +151,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fallback.toolTip = "Used when a browser doesn't expose its URL through Accessibility. macOS asks once per browser."
         menu.addItem(fallback)
 
+        let trigger = NSMenuItem(title: "Trigger", action: nil, keyEquivalent: "")
+        let triggerMenu = NSMenu()
+        for mode in TriggerMode.allCases {
+            let i = item(mode.title, #selector(setTrigger(_:)))
+            i.representedObject = mode.rawValue
+            i.state = monitor.mode == mode ? .on : .off
+            triggerMenu.addItem(i)
+        }
+        trigger.submenu = triggerMenu
+        menu.addItem(trigger)
+
         let delay = NSMenuItem(title: "Hold Delay", action: nil, keyEquivalent: "")
+        // Only meaningful for "Hold ⌘"; the double-tap gesture uses a short fixed hold.
+        delay.isEnabled = monitor.mode == .hold
         let delayMenu = NSMenu()
         for seconds in [0.3, 0.45, 0.6, 0.8, 1.0] {
             let i = item(String(format: "%.2g s", seconds), #selector(setDelay(_:)))
@@ -183,6 +203,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleAppleScript() {
         useAppleScriptFallback.toggle()
+        rebuildMenu()
+    }
+
+    @objc private func setTrigger(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let mode = TriggerMode(rawValue: raw) else { return }
+        monitor.mode = mode
+        defaults.set(raw, forKey: "triggerMode")
         rebuildMenu()
     }
 
