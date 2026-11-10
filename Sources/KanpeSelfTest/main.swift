@@ -90,6 +90,57 @@ check(run(.doubleTapHold, [.commandDown(0), .otherInput, .commandDown(0.2), .tim
 check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .otherInput, .commandDown(0.2), .timerFired]), [], "key between taps cancels")
 check(run(.doubleTapHold, [.commandDown(0), .commandUp(0.1), .commandDown(0.25), .timerFired, .commandUp(3)]), armed + [.show, .hide], "release hides")
 
+// MARK: Detail levels
+let leveledJSON = """
+{ "name": "Demo", "match": ["demo.test"], "groups": [
+  { "title": "A", "shortcuts": [
+    { "title": "a-core", "keys": "a" },
+    { "title": "a-ext", "keys": "b", "level": "extended" },
+    { "title": "a-all", "keys": "c", "level": "complete" } ] },
+  { "title": "B", "level": "complete", "shortcuts": [
+    { "title": "b-inherits", "keys": "d" },
+    { "title": "b-override", "keys": "e", "level": "core" } ] },
+  { "title": "C", "level": "extended", "shortcuts": [ { "title": "c-ext", "keys": "f" } ] } ] }
+"""
+let demo = try! JSONDecoder().decode(SitePack.self, from: Data(leveledJSON.utf8))
+func titles(_ level: DetailLevel) -> [String] { demo.displayGroups(level: level).flatMap { $0.shortcuts.map(\.title) } }
+check(titles(.core), ["a-core", "b-override"], "core shows untagged + core overrides")
+check(titles(.extended), ["a-core", "a-ext", "b-override", "c-ext"], "extended includes core")
+check(titles(.complete), ["a-core", "a-ext", "a-all", "b-inherits", "b-override", "c-ext"], "complete shows all")
+check(demo.displayGroups(level: .core).map(\.title), ["Demo · A", "Demo · B"], "empty groups dropped")
+check(demo.availableLevels, DetailLevel.allCases, "leveled pack offers levels")
+check([demo.count(at: .core), demo.count(at: .extended), demo.count(at: .complete)], [2, 4, 6], "counts per level")
+let flat = try! JSONDecoder().decode(SitePack.self, from: Data(#"{"name":"F","match":["f.test"],"groups":[{"title":"G","shortcuts":[{"title":"x","keys":"x"}]}]}"#.utf8))
+check(flat.availableLevels, [], "untagged pack has no level choice")
+check(flat.displayGroups(level: .core).flatMap(\.shortcuts).count, 1, "untagged pack shows everything at Core")
+check(DetailLevel.core < DetailLevel.extended && DetailLevel.extended < DetailLevel.complete, true, "level order")
+
+// MARK: Installing bundled packs never clobbers user edits
+do {
+    let fm = FileManager.default
+    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-selftest-\(UUID().uuidString)")
+    let bundled = root.appendingPathComponent("bundled"), user = root.appendingPathComponent("user")
+    try! fm.createDirectory(at: bundled, withIntermediateDirectories: true)
+    defer { try? fm.removeItem(at: root) }
+    let store = SitePackStore(directory: user)
+    func write(_ text: String, _ dir: URL, _ name: String) { try! Data(text.utf8).write(to: dir.appendingPathComponent(name)) }
+    func read(_ name: String) -> String { String(decoding: try! Data(contentsOf: user.appendingPathComponent(name)), as: UTF8.self) }
+
+    write("v1", bundled, "a.json"); write("v1", bundled, "b.json")
+    try! store.installDefaults(from: bundled)
+    check(read("a.json"), "v1", "fresh install copies")
+
+    write("user edit", user, "b.json")          // user edits b
+    write("v2", bundled, "a.json"); write("v2", bundled, "b.json")  // app update ships v2
+    try! store.installDefaults(from: bundled)
+    check(read("a.json"), "v2", "unedited pack is updated")
+    check(read("b.json"), "user edit", "edited pack is kept")
+
+    write("legacy", user, "c.json"); write("v1", bundled, "c.json")  // pre-existing file, no manifest entry
+    try! store.installDefaults(from: bundled)
+    check(read("c.json"), "legacy", "unknown pre-existing file is kept")
+}
+
 // MARK: Bundled packs parse and render
 let sitesDir = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -106,6 +157,12 @@ for pack in loaded.packs {
     }
 }
 check(SiteMatcher.packs(for: gh, in: loaded.packs).map(\.name), ["GitHub"], "GitHub pack matches github.com")
+for pack in loaded.packs {
+    let counts = DetailLevel.allCases.map(pack.count(at:))
+    check(!pack.availableLevels.isEmpty && counts[0] < counts[1] && counts[1] < counts[2], true,
+          "\(pack.name) levels grow strictly: \(counts)")
+    print("  \(pack.name): Core \(counts[0]) · Extended \(counts[1]) · Complete \(counts[2])")
+}
 
 if failures == 0 {
     print("All checks passed (\(loaded.packs.count) bundled site packs).")

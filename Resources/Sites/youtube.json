@@ -5,28 +5,28 @@
     {
       "title": "Playback",
       "shortcuts": [
-        { "title": "Play / pause", "keys": "k" },
-        { "title": "Back 10 seconds", "keys": "j" },
-        { "title": "Forward 10 seconds", "keys": "l" },
-        { "title": "Back / forward 5 seconds", "keys": "left or right" },
-        { "title": "Volume up / down", "keys": "up or down" },
-        { "title": "Mute", "keys": "m" },
-        { "title": "Seek to 0–90%", "keys": "0-9" },
-        { "title": "Previous / next frame (paused)", "keys": ", or ." },
-        { "title": "Slower / faster", "keys": "< or >" },
-        { "title": "Next video", "keys": "shift+n" },
-        { "title": "Previous video (playlist)", "keys": "shift+p" }
+        { "title": "Play / pause", "keys": "k", "level": "core" },
+        { "title": "Back 10 seconds", "keys": "j", "level": "core" },
+        { "title": "Forward 10 seconds", "keys": "l", "level": "core" },
+        { "title": "Mute", "keys": "m", "level": "core" },
+        { "title": "Back / forward 5 seconds", "keys": "left or right", "level": "extended" },
+        { "title": "Volume up / down", "keys": "up or down", "level": "extended" },
+        { "title": "Next video", "keys": "shift+n", "level": "extended" },
+        { "title": "Previous video (playlist)", "keys": "shift+p", "level": "extended" },
+        { "title": "Seek to 0–90%", "keys": "0-9", "level": "complete" },
+        { "title": "Previous / next frame (paused)", "keys": ", or .", "level": "complete" },
+        { "title": "Slower / faster", "keys": "< or >", "level": "complete" }
       ]
     },
     {
       "title": "View",
       "shortcuts": [
-        { "title": "Full screen", "keys": "f" },
-        { "title": "Theater mode", "keys": "t" },
-        { "title": "Miniplayer", "keys": "i" },
-        { "title": "Captions on / off", "keys": "c" },
-        { "title": "Search", "keys": "/" },
-        { "title": "Show keyboard shortcuts", "keys": "?" }
+        { "title": "Full screen", "keys": "f", "level": "core" },
+        { "title": "Captions on / off", "keys": "c", "level": "core" },
+        { "title": "Theater mode", "keys": "t", "level": "extended" },
+        { "title": "Miniplayer", "keys": "i", "level": "extended" },
+        { "title": "Search", "keys": "/", "level": "extended" },
+        { "title": "Show keyboard shortcuts", "keys": "?", "level": "complete" }
       ]
     }
   ]

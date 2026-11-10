@@ -13,12 +13,15 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
         exit(1)
     }
     let pid = target.processIdentifier
-    let url = args.count > flag + 3 ? URL(string: args[flag + 3]) : BrowserURLReader.urlViaAccessibility(pid: pid, bundleID: bundleID)
+    let url = args.count > flag + 3 && !args[flag + 3].hasPrefix("--") ? URL(string: args[flag + 3]) : BrowserURLReader.urlViaAccessibility(pid: pid, bundleID: bundleID)
+    // Optional: --level core|extended|complete (default: Core)
+    let level = args.firstIndex(of: "--level").flatMap { args.count > $0 + 1 ? DetailLevel(rawValue: args[$0 + 1]) : nil } ?? .default
     let packs = SitePackStore(directory: SitePackStore.defaultDirectory).load().packs
     let matched = url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
-                               host: url.flatMap(SiteMatcher.normalizedHost), matchedSites: matched.map(\.name),
-                               groups: matched.flatMap { $0.displayGroups() } + MenuReader.groups(pid: pid))
+                               host: url.flatMap(SiteMatcher.normalizedHost),
+                               sites: matched.map { SiteInfo(name: $0.name, level: level, availableLevels: $0.availableLevels) },
+                               groups: matched.flatMap { $0.displayGroups(level: level) } + MenuReader.groups(pid: pid))
     _ = NSApplication.shared
     let columns = ColumnLayout.columns(content.groups, rows: { $0.shortcuts.count }, maxColumns: 5, targetRowsPerColumn: 42)
     let view = PanelView(content: content, icon: target.icon, columns: columns)

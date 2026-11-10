@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var generation = 0
     private var prefetched: (generation: Int, app: NSRunningApplication, menus: [ShortcutGroup], url: URL?)?
     private var wantsShow = false
+    /// What's on screen, kept so a level change can re-render without re-reading the app.
+    private var shown: (app: NSRunningApplication, menus: [ShortcutGroup], url: URL?)?
 
     private let defaults = UserDefaults.standard
 
@@ -35,7 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         monitor.onBegin = { [weak self] in self?.prefetch() }
         monitor.onShow = { [weak self] in self?.wantsShow = true; self?.presentIfReady() }
-        monitor.onHide = { [weak self] in self?.wantsShow = false; self?.panel.hide() }
+        monitor.onHide = { [weak self] in self?.wantsShow = false; self?.shown = nil; self?.panel.hide() }
+        panel.onLevelChange = { [weak self] site, level in
+            self?.setLevel(level, forSite: site)
+        }
 
         if AX.isTrusted {
             monitor.start()
@@ -91,15 +96,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             url = BrowserURLReader.urlViaAppleScript(bundleID: bundleID)
         }
 
-        let matched = url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
+        shown = (data.app, data.menus, url)
+        render()
+    }
+
+    private func render() {
+        guard let shown else { return }
+        let bundleID = shown.app.bundleIdentifier
+        let matched = shown.url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
         let content = PanelContent(
-            appName: data.app.localizedName ?? bundleID ?? "App",
+            appName: shown.app.localizedName ?? bundleID ?? "App",
             bundleID: bundleID,
-            host: url.flatMap(SiteMatcher.normalizedHost),
-            matchedSites: matched.map(\.name),
-            groups: matched.flatMap { $0.displayGroups() } + data.menus
+            host: shown.url.flatMap(SiteMatcher.normalizedHost),
+            sites: matched.map { SiteInfo(name: $0.name, level: level(forSite: $0.name), availableLevels: $0.availableLevels) },
+            groups: matched.flatMap { $0.displayGroups(level: level(forSite: $0.name)) } + shown.menus
         )
-        panel.show(content, icon: data.app.icon)
+        panel.show(content, icon: shown.app.icon, animated: !panel.isVisible)
+    }
+
+    // MARK: - Detail levels (remembered per site)
+
+    private func level(forSite name: String) -> DetailLevel {
+        let stored = (defaults.dictionary(forKey: "siteLevels") as? [String: String])?[name]
+        return stored.flatMap(DetailLevel.init(rawValue:)) ?? .default
+    }
+
+    private func setLevel(_ level: DetailLevel, forSite name: String) {
+        var levels = (defaults.dictionary(forKey: "siteLevels") as? [String: String]) ?? [:]
+        levels[name] = level.rawValue
+        defaults.set(levels, forKey: "siteLevels")
+        render()
+        rebuildMenu()
     }
 
     // MARK: - Site packs
@@ -143,6 +170,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sites = NSMenuItem(title: "Site Shortcuts (\(packs.count) sites)", action: nil, keyEquivalent: "")
         sites.isEnabled = false
         menu.addItem(sites)
+        let leveled = packs.filter { !$0.availableLevels.isEmpty }
+        if !leveled.isEmpty {
+            let detail = NSMenuItem(title: "Detail Level", action: nil, keyEquivalent: "")
+            let detailMenu = NSMenu()
+            detailMenu.autoenablesItems = false
+            for pack in leveled {
+                let siteItem = NSMenuItem(title: "\(pack.name) — \(level(forSite: pack.name).title)", action: nil, keyEquivalent: "")
+                let levelsMenu = NSMenu()
+                for lvl in DetailLevel.allCases {
+                    let i = item("\(lvl.title) (\(pack.count(at: lvl)))", #selector(setLevelFromMenu(_:)))
+                    i.representedObject = [pack.name, lvl.rawValue]
+                    i.state = level(forSite: pack.name) == lvl ? .on : .off
+                    levelsMenu.addItem(i)
+                }
+                siteItem.submenu = levelsMenu
+                detailMenu.addItem(siteItem)
+            }
+            detail.submenu = detailMenu
+            menu.addItem(detail)
+        }
         menu.addItem(item("Open Site Shortcuts Folder", #selector(openSitesFolder)))
         menu.addItem(item("Reload Site Shortcuts", #selector(reloadSites), key: "r"))
 
@@ -204,6 +251,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleAppleScript() {
         useAppleScriptFallback.toggle()
         rebuildMenu()
+    }
+
+    @objc private func setLevelFromMenu(_ sender: NSMenuItem) {
+        guard let pair = sender.representedObject as? [String], pair.count == 2,
+              let lvl = DetailLevel(rawValue: pair[1]) else { return }
+        setLevel(lvl, forSite: pair[0])
     }
 
     @objc private func setTrigger(_ sender: NSMenuItem) {

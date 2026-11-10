@@ -5,36 +5,51 @@
     {
       "title": "Compose & find",
       "shortcuts": [
-        { "title": "Compose", "keys": "c" },
-        { "title": "Search mail", "keys": "/" },
-        { "title": "Send (in compose)", "keys": "cmd+enter" },
-        { "title": "Show keyboard shortcuts", "keys": "?" }
+        { "title": "Compose", "keys": "c", "level": "core" },
+        { "title": "Search mail", "keys": "/", "level": "core" },
+        { "title": "Send (in compose)", "keys": "cmd+enter", "level": "core" },
+        { "title": "Show keyboard shortcuts", "keys": "?", "level": "extended" }
       ]
     },
     {
       "title": "Conversations",
       "shortcuts": [
-        { "title": "Newer / older conversation", "keys": "k or j" },
-        { "title": "Open conversation", "keys": "o" },
-        { "title": "Back to list", "keys": "u" },
-        { "title": "Select conversation", "keys": "x" },
-        { "title": "Archive", "keys": "e" },
-        { "title": "Delete", "keys": "#" },
-        { "title": "Reply", "keys": "r" },
-        { "title": "Reply all", "keys": "a" },
-        { "title": "Forward", "keys": "f" },
-        { "title": "Star", "keys": "s" },
-        { "title": "Mark as read", "keys": "shift+i" },
-        { "title": "Mark as unread", "keys": "shift+u" }
+        { "title": "Archive", "keys": "e", "level": "core" },
+        { "title": "Reply", "keys": "r", "level": "core" },
+        { "title": "Reply all", "keys": "a", "level": "core" },
+        { "title": "Forward", "keys": "f", "level": "core" },
+        { "title": "Newer / older conversation", "keys": "k or j", "level": "extended" },
+        { "title": "Open conversation", "keys": "o", "level": "extended" },
+        { "title": "Back to list", "keys": "u", "level": "extended" },
+        { "title": "Select conversation", "keys": "x", "level": "extended" },
+        { "title": "Delete", "keys": "#", "level": "extended" },
+        { "title": "Star", "keys": "s", "level": "extended" },
+        { "title": "Mark as read", "keys": "shift+i", "level": "extended" },
+        { "title": "Mark as unread", "keys": "shift+u", "level": "extended" },
+        { "title": "Undo last action", "keys": "z", "level": "complete" },
+        { "title": "Mute conversation", "keys": "m", "level": "complete" },
+        { "title": "Report as spam", "keys": "!", "level": "complete" },
+        { "title": "Label as…", "keys": "l", "level": "complete" },
+        { "title": "Move to…", "keys": "v", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Selection",
+      "level": "complete",
+      "shortcuts": [
+        { "title": "Select all", "keys": "* a" },
+        { "title": "Deselect all", "keys": "* n" }
       ]
     },
     {
       "title": "Go to",
+      "level": "extended",
       "shortcuts": [
         { "title": "Inbox", "keys": "g i" },
         { "title": "Starred", "keys": "g s" },
         { "title": "Sent", "keys": "g t" },
-        { "title": "Drafts", "keys": "g d" }
+        { "title": "Drafts", "keys": "g d" },
+        { "title": "All mail", "keys": "g a", "level": "complete" }
       ]
     }
   ]

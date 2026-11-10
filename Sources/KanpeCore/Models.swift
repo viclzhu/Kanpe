@@ -38,15 +38,28 @@ public struct PanelContent: Sendable {
     public var bundleID: String?
     /// Host of the active browser tab, if the frontmost app is a browser and the URL could be read.
     public var host: String?
-    /// Names of the site packs that matched `host`.
-    public var matchedSites: [String]
+    /// Site packs that matched `host`, with the detail level each is shown at.
+    public var sites: [SiteInfo]
     public var groups: [ShortcutGroup]
 
-    public init(appName: String, bundleID: String?, host: String?, matchedSites: [String], groups: [ShortcutGroup]) {
+    public init(appName: String, bundleID: String?, host: String?, sites: [SiteInfo], groups: [ShortcutGroup]) {
         self.appName = appName
         self.bundleID = bundleID
         self.host = host
-        self.matchedSites = matchedSites
+        self.sites = sites
         self.groups = groups
+    }
+}
+
+public struct SiteInfo: Hashable, Sendable {
+    public var name: String
+    public var level: DetailLevel
+    /// Empty if the pack has no levels to choose between.
+    public var availableLevels: [DetailLevel]
+
+    public init(name: String, level: DetailLevel, availableLevels: [DetailLevel]) {
+        self.name = name
+        self.level = level
+        self.availableLevels = availableLevels
     }
 }

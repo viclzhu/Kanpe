@@ -5,6 +5,7 @@ struct PanelView: View {
     let content: PanelContent
     let icon: NSImage?
     let columns: [[ShortcutGroup]]
+    var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     static let columnWidth: CGFloat = 270
 
     var body: some View {
@@ -37,14 +38,22 @@ struct PanelView: View {
             }
             Text(content.appName).font(.title3.weight(.semibold))
             if let host = content.host {
-                Label(host, systemImage: content.matchedSites.isEmpty ? "globe" : "globe.badge.chevron.backward")
+                Label(host, systemImage: "globe")
                     .font(.callout)
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(content.matchedSites.isEmpty ? Color.secondary.opacity(0.15) : Color.accentColor.opacity(0.2),
+                    .background(content.sites.isEmpty ? Color.secondary.opacity(0.15) : Color.accentColor.opacity(0.2),
                                 in: Capsule())
-                    .foregroundStyle(content.matchedSites.isEmpty ? .secondary : .primary)
+                    .foregroundStyle(content.sites.isEmpty ? .secondary : .primary)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: 16)
+            ForEach(content.sites.filter { !$0.availableLevels.isEmpty }, id: \.name) { site in
+                HStack(spacing: 6) {
+                    if content.sites.count > 1 {
+                        Text(site.name).font(.caption).foregroundStyle(.secondary)
+                    }
+                    LevelPicker(levels: site.availableLevels, selected: site.level) { onLevelChange(site.name, $0) }
+                }
+            }
         }
     }
 
@@ -108,5 +117,43 @@ private struct KeysView: View {
 
     private func connector(_ word: String) -> some View {
         Text(word).font(.system(size: 9)).foregroundStyle(.tertiary).fixedSize()
+    }
+}
+
+/// Segmented Core | Extended | Complete control. Plain buttons rather than a Picker so it
+/// works reliably inside a panel that never becomes key.
+private struct LevelPicker: View {
+    let levels: [DetailLevel]
+    let selected: DetailLevel
+    let onSelect: (DetailLevel) -> Void
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(levels, id: \.self) { level in
+                Button { onSelect(level) } label: {
+                    Text(level.title)
+                        .font(.caption.weight(level == selected ? .semibold : .regular))
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .background(level == selected ? Color.accentColor : .clear,
+                                    in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .foregroundStyle(level == selected ? Color.white : .primary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(level.hint)
+            }
+        }
+        .padding(2)
+        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+}
+
+private extension DetailLevel {
+    var hint: String {
+        switch self {
+        case .core: return "The essentials"
+        case .extended: return "Everyday shortcuts"
+        case .complete: return "Everything in this cheat sheet"
+        }
     }
 }

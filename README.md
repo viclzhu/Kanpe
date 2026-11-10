@@ -29,12 +29,12 @@ Debug without the UI (run from a terminal that has Accessibility access):
 
 ```sh
 .build/debug/Kanpe --dump com.google.Chrome                 # print what the panel would show
-.build/debug/Kanpe --render com.google.Chrome out.png https://github.com   # render the panel to a PNG
+.build/debug/Kanpe --render com.google.Chrome out.png https://github.com --level extended   # render to a PNG
 ```
 
 ## Adding site shortcuts
 
-Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use the menu-bar icon → **Open Site Shortcuts Folder**, then **Reload Site Shortcuts** after you edit. Bundled packs are copied there on first launch and are never overwritten, so you can edit them freely.
+Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use the menu-bar icon → **Open Site Shortcuts Folder**, then **Reload Site Shortcuts** after you edit. Bundled packs are copied there on first launch. Edit them freely: the app never overwrites a pack you've changed.
 
 ```json
 {
@@ -52,6 +52,25 @@ Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use t
   ]
 }
 ```
+
+### Detail levels: Core, Extended, Complete
+
+Each site can be shown at one of three levels, and each level includes the ones before it:
+- **Core:** the handful you'd put on a sticky note. This is what a site shows until you pick another level.
+- **Extended:** everyday shortcuts.
+- **Complete:** everything in the pack.
+
+The level is remembered **per site**. Change it from the **Core | Extended | Complete** control in the panel header (keep holding `⌘` and click it), or from the menu-bar icon → **Detail Level**.
+
+Tag shortcuts in a pack with `"level": "core" | "extended" | "complete"`. You can put a `level` on a group, which applies to all its shortcuts, and override it on individual shortcuts. Untagged shortcuts count as Core, so a pack without any levels always shows everything and doesn't get a level picker.
+
+```json
+{ "title": "Notifications", "level": "complete", "shortcuts": [
+    { "title": "Mark as done", "keys": "e" },
+    { "title": "Go to notifications", "keys": "g n", "level": "extended" } ] }
+```
+
+**Updates to bundled packs:** when a new version of the app includes an updated pack, it replaces your copy only if you haven't edited it. Packs you've edited are never overwritten.
 
 **`match`** takes hosts. Subdomains also match, so `github.com` matches `gist.github.com`, and a leading `www.` is ignored. You can add a path prefix (`google.com/maps`) or a wildcard (`*.atlassian.net`).
 
