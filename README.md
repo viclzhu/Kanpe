@@ -30,9 +30,24 @@ Debug without the UI (run from a terminal that has Accessibility access):
 ```sh
 .build/debug/Kanpe --dump com.google.Chrome                 # print what the panel would show
 .build/debug/Kanpe --render com.google.Chrome out.png https://github.com --level extended   # render to a PNG
+.build/debug/Kanpe --render-editor editor.png GitHub        # editor screenshot (needs Screen Recording)
 ```
 
-## Adding site shortcuts
+## Editing shortcuts
+
+Open the editor from the menu-bar icon → **Edit Shortcuts…** (⌘,), or click the ✎ button in the panel header to jump straight to the site you're on. The button shows **+** if that site has no shortcuts yet.
+
+- **Sites** are listed in the sidebar. Use **+** / **−** to add or delete one, and right-click a site to **Duplicate**, **Revert to Built-in** or **Show in Finder**. **•••** → **Restore Built-in Sites** brings back built-in sites you deleted.
+- **Domains** appear as chips. Type a domain and press Return to add it. Subdomains are included, and you can narrow a domain with a path.
+- **Shortcuts:** each row has a description, a keys field and a level.
+  - Type keys in the notation described below, or click ◉ and press them. A combination like ⇧⌘P works, and so does a sequence like G then I; recording stops after a short pause.
+  - Keycaps preview live as you type.
+  - Drag rows to reorder them, and click the colored pill to set the level.
+- **Groups:** rename one by clicking its title. Its **•••** menu sets the level for all its shortcuts, moves the group up or down, or deletes it.
+
+Changes save automatically and show in the panel right away. A site you've edited won't be overwritten by app updates.
+
+## Site shortcut files
 
 Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use the menu-bar icon → **Open Site Shortcuts Folder**, then **Reload Site Shortcuts** after you edit. Bundled packs are copied there on first launch. Edit them freely: the app never overwrites a pack you've changed.
 

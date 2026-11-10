@@ -1,6 +1,7 @@
 import AppKit
 import KanpeCore
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor: ActivationMonitor
     private let panel = PanelController()
@@ -8,6 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var packs: [SitePack] = []
     private var statusItem: NSStatusItem!
     private var trustTimer: Timer?
+    private var bundledSites: URL? { Bundle.main.resourceURL?.appendingPathComponent("Sites") }
+    private lazy var editor = EditorWindowController(store: store, bundledDirectory: bundledSites) { [weak self] in
+        self?.reloadPacks()
+        self?.rebuildMenu()
+    }
 
     // Prefetch state: gathering starts when ⌘ goes down, so the panel is usually ready by the
     // time the hold delay elapses.
@@ -41,6 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onLevelChange = { [weak self] site, level in
             self?.setLevel(level, forSite: site)
         }
+        panel.onEdit = { [weak self] site in
+            self?.wantsShow = false
+            self?.panel.hide()
+            self?.editor.show(selectingSiteNamed: site)
+        }
 
         if AX.isTrusted {
             monitor.start()
@@ -50,8 +61,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             trustTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
                 guard AX.isTrusted else { return }
                 timer.invalidate()
-                self?.monitor.start()
-                self?.rebuildMenu()
+                MainActor.assumeIsolated {
+                    self?.monitor.start()
+                    self?.rebuildMenu()
+                }
             }
         }
     }
@@ -133,7 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reloadPacks(installDefaults: Bool = false) {
         if installDefaults {
-            try? store.installDefaults(from: Bundle.main.resourceURL?.appendingPathComponent("Sites"))
+            try? store.installDefaults(from: bundledSites)
         }
         let result = store.load()
         packs = result.packs
@@ -190,6 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             detail.submenu = detailMenu
             menu.addItem(detail)
         }
+        menu.addItem(item("Edit Shortcuts…", #selector(openEditor), key: ","))
         menu.addItem(item("Open Site Shortcuts Folder", #selector(openSitesFolder)))
         menu.addItem(item("Reload Site Shortcuts", #selector(reloadSites), key: "r"))
 
@@ -236,6 +250,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func grantAccess() {
         AX.requestTrust()
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+    }
+
+    @objc private func openEditor() {
+        editor.show()
     }
 
     @objc private func openSitesFolder() {

@@ -157,8 +157,7 @@ public struct SitePackStore {
               let files = try? fm.contentsOfDirectory(at: bundledDirectory, includingPropertiesForKeys: nil)
         else { return }
 
-        let manifestURL = directory.appendingPathComponent(".installed.json")
-        var manifest = (try? JSONDecoder().decode([String: String].self, from: Data(contentsOf: manifestURL))) ?? [:]
+        var manifest = readManifest()
 
         for file in files where file.pathExtension == "json" {
             let name = file.lastPathComponent
@@ -166,6 +165,14 @@ public struct SitePackStore {
             let bundled = try Data(contentsOf: file)
             let bundledDigest = Self.digest(bundled)
 
+            guard fm.fileExists(atPath: target.path) else {
+                // Installed before and now missing: the user deleted it. Don't bring it back.
+                if manifest[name] == nil {
+                    try bundled.write(to: target, options: .atomic)
+                    manifest[name] = bundledDigest
+                }
+                continue
+            }
             if let existing = try? Data(contentsOf: target) {
                 let existingDigest = Self.digest(existing)
                 if existingDigest == bundledDigest {
@@ -177,9 +184,95 @@ public struct SitePackStore {
             try bundled.write(to: target, options: .atomic)
             manifest[name] = bundledDigest
         }
+        try writeManifest(manifest)
+    }
+
+    // MARK: Install manifest (tracks what we installed, to tell user edits apart)
+
+    private var manifestURL: URL { directory.appendingPathComponent(".installed.json") }
+
+    private func readManifest() -> [String: String] {
+        (try? JSONDecoder().decode([String: String].self, from: Data(contentsOf: manifestURL))) ?? [:]
+    }
+
+    private func writeManifest(_ manifest: [String: String]) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+    }
+
+    // MARK: Editing
+
+    /// Writes a pack as formatted JSON.
+    public func save(_ pack: SitePack, to url: URL) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Self.encode(pack).write(to: url, options: .atomic)
+    }
+
+    public static func encode(_ pack: SitePack) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        return try encoder.encode(pack)
+    }
+
+    /// Deletes a pack file. Built-in packs stay deleted (see `installDefaults`).
+    public func delete(_ url: URL) throws {
+        try FileManager.default.removeItem(at: url)
+    }
+
+    /// A file name for a new pack, derived from its name and not clashing with existing files.
+    public func newFileURL(forName name: String) -> URL {
+        let slug = name.lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
+            .joined()
+            .split(separator: "-").joined(separator: "-")
+        let base = slug.isEmpty ? "site" : slug
+        var candidate = directory.appendingPathComponent("\(base).json")
+        var n = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = directory.appendingPathComponent("\(base)-\(n).json")
+            n += 1
+        }
+        return candidate
+    }
+
+    /// The bundled pack with this file name, if there is one (i.e. the pack is built in).
+    public func bundledPackURL(for fileURL: URL, in bundledDirectory: URL?) -> URL? {
+        guard let url = bundledDirectory?.appendingPathComponent(fileURL.lastPathComponent),
+              FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
+    }
+
+    /// Built-in packs the user has deleted.
+    public func missingBundledPacks(in bundledDirectory: URL?) -> [URL] {
+        guard let bundledDirectory,
+              let files = try? FileManager.default.contentsOfDirectory(at: bundledDirectory, includingPropertiesForKeys: nil)
+        else { return [] }
+        return files.filter {
+            $0.pathExtension == "json" &&
+                !FileManager.default.fileExists(atPath: directory.appendingPathComponent($0.lastPathComponent).path)
+        }
+    }
+
+    /// Brings back deleted built-in packs. Returns how many were restored.
+    @discardableResult
+    public func restoreMissingBundledPacks(from bundledDirectory: URL?) throws -> Int {
+        let missing = missingBundledPacks(in: bundledDirectory)
+        for source in missing {
+            try revertToBundled(directory.appendingPathComponent(source.lastPathComponent), from: bundledDirectory)
+        }
+        return missing.count
+    }
+
+    /// Replaces the user's copy with the bundled version (and marks it unedited, so future
+    /// app updates apply to it again).
+    public func revertToBundled(_ fileURL: URL, from bundledDirectory: URL?) throws {
+        guard let source = bundledPackURL(for: fileURL, in: bundledDirectory) else { return }
+        let data = try Data(contentsOf: source)
+        try data.write(to: fileURL, options: .atomic)
+        var manifest = readManifest()
+        manifest[fileURL.lastPathComponent] = Self.digest(data)
+        try writeManifest(manifest)
     }
 
     /// Stable content fingerprint (FNV-1a 64). Only used to detect edits, not for security.
@@ -192,25 +285,31 @@ public struct SitePackStore {
         return String(hash, radix: 16)
     }
 
+    public struct LoadedPack {
+        public var fileURL: URL
+        public var pack: SitePack
+    }
+
     public struct LoadResult {
-        public var packs: [SitePack]
+        public var loaded: [LoadedPack]
         public var errors: [(file: String, message: String)]
+        public var packs: [SitePack] { loaded.map(\.pack) }
     }
 
     public func load() -> LoadResult {
         let fm = FileManager.default
         let files = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        var packs: [SitePack] = []
+        var loaded: [LoadedPack] = []
         var errors: [(String, String)] = []
         let decoder = JSONDecoder()
-        for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where file.pathExtension == "json" {
+        for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where file.pathExtension == "json" && !file.lastPathComponent.hasPrefix(".") {
             do {
                 let data = try Data(contentsOf: file)
-                packs.append(try decoder.decode(SitePack.self, from: data))
+                loaded.append(LoadedPack(fileURL: file, pack: try decoder.decode(SitePack.self, from: data)))
             } catch {
                 errors.append((file.lastPathComponent, String(describing: error)))
             }
         }
-        return LoadResult(packs: packs, errors: errors)
+        return LoadResult(loaded: loaded, errors: errors)
     }
 }

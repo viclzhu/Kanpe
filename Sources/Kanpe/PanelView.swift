@@ -6,6 +6,7 @@ struct PanelView: View {
     let icon: NSImage?
     let columns: [[ShortcutGroup]]
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
+    var onEdit: (String?) -> Void = { _ in }
     static let columnWidth: CGFloat = 270
 
     var body: some View {
@@ -54,6 +55,15 @@ struct PanelView: View {
                     LevelPicker(levels: site.availableLevels, selected: site.level) { onLevelChange(site.name, $0) }
                 }
             }
+            if content.host != nil {
+                Button { onEdit(content.sites.first?.name) } label: {
+                    Image(systemName: content.sites.isEmpty ? "plus.circle" : "pencil.circle")
+                        .font(.system(size: 17))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(content.sites.isEmpty ? "Add shortcuts for this site" : "Edit this site's shortcuts")
+            }
         }
     }
 
@@ -96,7 +106,7 @@ private struct GroupView: View {
     }
 }
 
-private struct KeysView: View {
+struct KeysView: View {
     let alternatives: [[String]]
 
     var body: some View {
@@ -148,7 +158,7 @@ private struct LevelPicker: View {
     }
 }
 
-private extension DetailLevel {
+extension DetailLevel {
     var hint: String {
         switch self {
         case .core: return "The essentials"

@@ -37,6 +37,34 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     print("Wrote \(args[flag + 2]) (\(Int(hosting.bounds.width))×\(Int(hosting.bounds.height)))")
     exit(0)
 }
+// Kanpe --render-editor <out.png> [site name]   render the shortcut editor (read-only; nothing is saved)
+if let flag = args.firstIndex(of: "--render-editor"), args.count > flag + 1 {
+    MainActor.assumeIsolated {
+        _ = NSApplication.shared
+        let model = EditorModel(store: SitePackStore(directory: SitePackStore.defaultDirectory), bundledDirectory: nil)
+        if args.count > flag + 2, let site = model.sites.first(where: { $0.name == args[flag + 2] }) {
+            model.selection = site.id
+        }
+        let window = NSWindow(contentRect: NSRect(x: -3000, y: 0, width: 940, height: 640),
+                              styleMask: [.titled, .closable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.title = "Edit Shortcuts"
+        window.contentViewController = NSHostingController(rootView: EditorRootView(model: model))
+        window.setContentSize(NSSize(width: 940, height: 640))
+        window.orderFrontRegardless()
+        RunLoop.main.run(until: Date().addingTimeInterval(1.0)) // let SwiftUI lay out
+        // Window-server capture (needs Screen Recording permission for the launching terminal);
+        // offscreen view caching can't draw SwiftUI lists/sidebars.
+        guard let cg = CGWindowListCreateImage(.null, .optionIncludingWindow, CGWindowID(window.windowNumber),
+                                               [.boundsIgnoreFraming, .bestResolution]) else {
+            print("Window capture failed (Screen Recording permission?)")
+            exit(1)
+        }
+        let rep = NSBitmapImageRep(cgImage: cg)
+        try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: args[flag + 1]))
+        print("Wrote \(args[flag + 1])")
+        exit(0)
+    }
+}
 if let flag = args.firstIndex(of: "--dump"), args.count > flag + 1 {
     let bundleID = args[flag + 1]
     guard let target = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else {
@@ -66,8 +94,10 @@ if let flag = args.firstIndex(of: "--dump"), args.count > flag + 1 {
     exit(0)
 }
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory) // menu-bar only, no Dock icon
-app.run()
+MainActor.assumeIsolated {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
+    app.delegate = delegate
+    app.setActivationPolicy(.accessory) // menu-bar only, no Dock icon
+    app.run()
+}

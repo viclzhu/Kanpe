@@ -141,6 +141,89 @@ do {
     check(read("c.json"), "legacy", "unknown pre-existing file is kept")
 }
 
+// MARK: Editing model
+do {
+    var site = EditableSite(demo, fileURL: nil)
+    check(site.pack, demo, "editable round-trips to the same pack")
+
+    // Per-shortcut level: stored only when it differs from the group's level.
+    site.groups[1].setLevel(.complete, forShortcutAt: 1)  // group B is complete → override cleared
+    check(site.groups[1].shortcuts[1].level, nil, "level equal to group's is not stored")
+    site.groups[0].setLevel(.extended, forShortcutAt: 0)
+    check(site.groups[0].shortcuts[0].level, .extended, "different level is stored")
+    site.groups[0].setAllLevels(.complete)
+    check(site.groups[0].level, .complete, "set-all stores on group")
+    check(site.groups[0].shortcuts.allSatisfy { $0.level == nil }, true, "set-all clears overrides")
+
+    // Blank rows are dropped on save; half-filled rows are kept and flagged.
+    var blank = EditableSite.blank()
+    check(blank.pack.groups[0].shortcuts.count, 0, "untouched blank row is not saved")
+    check(blank.issues.count, 1, "blank site flags missing domain only: \(blank.issues)")
+    blank.groups[0].shortcuts[0].title = "Do thing"
+    check(blank.pack.groups[0].shortcuts.count, 1, "row with a title is saved")
+    check(blank.issues.contains { $0.contains("no keys") }, true, "missing keys flagged")
+
+    var d = EditableSite.blank()
+    d.addDomains("https://GitHub.com/, gist.github.com  github.com")
+    check(d.match, ["github.com", "gist.github.com"], "domains normalised and de-duplicated")
+    check(d.addDomains("  "), false, "empty domain input ignored")
+}
+
+// MARK: Key recording
+typealias M = KeyRecording.Modifiers
+check(KeyRecording.notation(keyCode: 35, characters: "p", modifiers: [.shift, .command]), "shift+cmd+p", "letter with modifiers")
+check(KeyRecording.notation(keyCode: 35, characters: "P", modifiers: [.shift]), "shift+p", "shifted letter lowercased")
+check(KeyRecording.notation(keyCode: 44, characters: "?", modifiers: [.shift]), "?", "shift folded into symbol")
+check(KeyRecording.notation(keyCode: 44, characters: "/", modifiers: [.command]), "cmd+/", "cmd slash")
+check(KeyRecording.notation(keyCode: 36, characters: "\r", modifiers: [.command]), "cmd+enter", "named key")
+check(KeyRecording.notation(keyCode: 123, characters: "\u{F702}", modifiers: []), "left", "arrow")
+check(KeyRecording.notation(keyCode: 24, characters: "+", modifiers: [.command]), "cmd+plus", "plus key")
+check(KeyRecording.notation(keyCode: 18, characters: "1", modifiers: [.shift]), "shift+1", "shift kept for digits")
+check(KeyRecording.notation(keyCode: 999, characters: nil, modifiers: []), nil, "unknown key ignored")
+check(KeyNotation.parse(KeyRecording.notation(keyCode: 35, characters: "p", modifiers: [.shift, .command])!), ["⇧⌘P"], "recorded notation renders")
+
+// MARK: Store editing operations
+do {
+    let fm = FileManager.default
+    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-edit-\(UUID().uuidString)")
+    let bundled = root.appendingPathComponent("bundled"), user = root.appendingPathComponent("user")
+    try! fm.createDirectory(at: bundled, withIntermediateDirectories: true)
+    defer { try? fm.removeItem(at: root) }
+    try! SitePackStore.encode(demo).write(to: bundled.appendingPathComponent("demo.json"))
+    let store = SitePackStore(directory: user)
+    try! store.installDefaults(from: bundled)
+
+    let first = store.load()
+    check(first.errors.count, 0, "install manifest is not read as a pack: \(first.errors)")
+    check(first.packs, [demo], "installed pack loads")
+
+    // Edit and save: counts as a user edit, so app updates leave it alone.
+    let url = first.loaded[0].fileURL
+    var edited = EditableSite(demo, fileURL: url)
+    edited.name = "Demo (mine)"
+    try! store.save(edited.pack, to: url)
+    try! store.installDefaults(from: bundled)
+    check(store.load().packs.first?.name, "Demo (mine)", "saved edit survives reinstall")
+
+    // Revert brings back the built-in.
+    check(store.bundledPackURL(for: url, in: bundled) != nil, true, "detected as built-in")
+    try! store.revertToBundled(url, from: bundled)
+    check(store.load().packs.first?.name, "Demo", "revert restores built-in")
+
+    // Delete sticks across launches; restore brings it back.
+    try! store.delete(url)
+    try! store.installDefaults(from: bundled)
+    check(store.load().packs.count, 0, "deleted built-in stays deleted")
+    check(store.missingBundledPacks(in: bundled).count, 1, "deleted built-in is restorable")
+    check(try! store.restoreMissingBundledPacks(from: bundled), 1, "restore count")
+    check(store.load().packs.first?.name, "Demo", "restored")
+
+    // New file names are slugged and unique.
+    check(store.newFileURL(forName: "My Site!").lastPathComponent, "my-site.json", "slug")
+    check(store.newFileURL(forName: "Demo").lastPathComponent, "demo-2.json", "unique name")
+    check(store.newFileURL(forName: "!!!").lastPathComponent, "site.json", "fallback name")
+}
+
 // MARK: Bundled packs parse and render
 let sitesDir = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

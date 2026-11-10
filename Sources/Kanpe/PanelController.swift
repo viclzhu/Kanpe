@@ -29,6 +29,8 @@ private final class ClickThroughHostingView<Content: View>: NSHostingView<Conten
 final class PanelController {
     private let panel = FloatingPanel()
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
+    /// Site name to open in the editor, or nil for the editor's default selection.
+    var onEdit: (String?) -> Void = { _ in }
 
     var isVisible: Bool { panel.isVisible }
 
@@ -45,7 +47,8 @@ final class PanelController {
                                            maxColumns: maxColumns, targetRowsPerColumn: targetRows)
 
         let view = PanelView(content: content, icon: icon, columns: columns,
-                             onLevelChange: { [weak self] site, level in self?.onLevelChange(site, level) })
+                             onLevelChange: { [weak self] site, level in self?.onLevelChange(site, level) },
+                             onEdit: { [weak self] site in self?.onEdit(site) })
         let hosting = ClickThroughHostingView(rootView: view)
         var size = hosting.fittingSize
 
