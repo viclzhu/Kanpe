@@ -53,15 +53,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.editor.show(selectingSiteNamed: site)
         }
 
+        Log.app.notice("Launched; accessibility trusted: \(AX.isTrusted)")
         if AX.isTrusted {
             monitor.start()
         } else {
+            Log.app.error("Accessibility access missing; key events are unavailable until it's granted")
             AX.requestTrust()
             // Global event monitors only work once trusted, so start them as soon as that happens.
             trustTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
                 guard AX.isTrusted else { return }
                 timer.invalidate()
                 MainActor.assumeIsolated {
+                    Log.app.notice("Accessibility access granted")
                     self?.monitor.start()
                     self?.rebuildMenu()
                 }
@@ -100,7 +103,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func presentIfReady() {
         guard wantsShow, monitor.isShowing,
-              let data = prefetched, data.generation == generation else { return }
+              let data = prefetched, data.generation == generation else {
+            Log.app.debug("Not ready to present (wantsShow: \(self.wantsShow), showing: \(self.monitor.isShowing), prefetched: \(self.prefetched != nil))")
+            return
+        }
+        Log.app.debug("Presenting panel for \(data.app.bundleIdentifier ?? "?", privacy: .public)")
         wantsShow = false
 
         var url = data.url
@@ -163,8 +170,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "Kanpe")
         rebuildMenu()
+    }
+
+    /// Normal icon when ready; a warning icon while Accessibility access is missing, since
+    /// without it macOS silently withholds key events and the trigger can't work.
+    private func updateStatusIcon() {
+        let trusted = AX.isTrusted
+        let image = NSImage(systemSymbolName: trusted ? "command.square" : "exclamationmark.triangle",
+                            accessibilityDescription: trusted ? "Kanpe" : "Kanpe needs Accessibility access")
+        image?.isTemplate = true
+        statusItem.button?.image = image
+        statusItem.button?.toolTip = trusted ? "Kanpe" : "Kanpe needs Accessibility access"
     }
 
     private func rebuildMenu() {
@@ -175,8 +192,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(hint)
         menu.addItem(.separator())
 
+        updateStatusIcon()
         if !AX.isTrusted {
-            menu.addItem(item("Grant Accessibility Access…", #selector(grantAccess)))
+            let warning = NSMenuItem(title: "⚠︎ Accessibility access needed: ⌘ can't be detected yet", action: nil, keyEquivalent: "")
+            warning.isEnabled = false
+            menu.addItem(warning)
+            menu.addItem(item("Open Accessibility Settings…", #selector(grantAccess)))
+            for line in ["Turn on Kanpe in the list. If it's already on,",
+                         "select it, click −, then add Kanpe again."] {
+                let hint = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+                hint.isEnabled = false
+                hint.indentationLevel = 1
+                menu.addItem(hint)
+            }
             menu.addItem(.separator())
         }
 

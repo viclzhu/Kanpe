@@ -16,12 +16,22 @@ Release `⌘` (or press any key) to dismiss it. Shortcuts you type with `⌘` (�
 Requires macOS 13+ and Swift 5.10+ (Command Line Tools are enough; Xcode is not required).
 
 ```sh
-scripts/bundle.sh          # → build/Kanpe.app (ad-hoc signed)
+scripts/setup-signing.sh   # once: creates a local signing identity (see below)
+scripts/bundle.sh          # → build/Kanpe.app
 open build/Kanpe.app
 ```
 
-On first launch, grant **Accessibility** access (System Settings → Privacy & Security → Accessibility).
-With ad-hoc signing, each rebuild counts as a new app to macOS: if the panel stops appearing, remove Kanpe from the Accessibility list and add it again. Signing with a stable identity (`SIGN_IDENTITY="…" scripts/bundle.sh`) avoids this.
+On first launch, grant **Accessibility** access (System Settings → Privacy & Security → Accessibility). Until you do, the menu-bar icon shows ⚠︎ and ⌘ isn't detected, because macOS gives key events only to apps that have this access.
+
+**Why `setup-signing.sh`:** macOS ties the Accessibility grant to the app's code signature. Ad-hoc builds get a new identity on every rebuild, so the grant stops applying even though the switch still looks on. The script creates a self-signed "Kanpe Local Signing" certificate in your login keychain, and `bundle.sh` uses it automatically, so the grant survives rebuilds. To remove the certificate: `security delete-identity -c "Kanpe Local Signing" ~/Library/Keychains/login.keychain-db`.
+
+**Trigger not working?** Check the logs:
+
+```sh
+/usr/bin/log stream --predicate 'subsystem == "dev.victorzhu.Kanpe"' --level debug
+```
+
+`Launched; accessibility trusted: false` means permission is the problem. Remove Kanpe from the Accessibility list with −, then add it again.
 
 Checks for the core logic: `swift build && .build/debug/KanpeSelfTest`
 

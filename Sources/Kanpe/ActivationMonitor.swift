@@ -39,6 +39,7 @@ final class ActivationMonitor {
         // Local monitors cover the rare case where Kanpe itself is active (e.g. its menu is open).
         if let m = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged, handler: { flags($0); return $0 }) { monitors.append(m) }
         if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { key($0); return $0 }) { monitors.append(m) }
+        Log.trigger.notice("Monitors started (\(self.monitors.count) installed, mode: \(self.machine.mode.rawValue, privacy: .public), accessibility trusted: \(AX.isTrusted))")
     }
 
     func stop() {
@@ -57,6 +58,7 @@ final class ActivationMonitor {
             .subtracting([.capsLock, .numericPad, .function])
         defer { previousModifiers = mods }
         guard mods != previousModifiers else { return }
+        Log.trigger.debug("flagsChanged: \(mods.rawValue, format: .hex) (was \(self.previousModifiers.rawValue, format: .hex))")
 
         if mods == .command, previousModifiers.isEmpty {
             send(.commandDown(event.timestamp))
@@ -69,7 +71,11 @@ final class ActivationMonitor {
     }
 
     private func send(_ event: TriggerStateMachine.Event) {
-        for effect in machine.handle(event) {
+        let effects = machine.handle(event)
+        if !effects.isEmpty {
+            Log.trigger.debug("\(String(describing: event), privacy: .public) → \(String(describing: effects), privacy: .public)")
+        }
+        for effect in effects {
             switch effect {
             case .begin:
                 onBegin()

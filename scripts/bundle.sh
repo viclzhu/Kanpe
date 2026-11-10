@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Builds Kanpe.app into ./build.
-#   scripts/bundle.sh            # release build, ad-hoc signed
+#   scripts/bundle.sh            # release build (see Signing below)
 #   SIGN_IDENTITY="Developer ID Application: …" scripts/bundle.sh
 #
-# Note: with ad-hoc signing, macOS treats every rebuild as a new app, so you may need to
-# remove and re-add Kanpe under System Settings → Privacy & Security → Accessibility.
-# A stable signing identity avoids that.
+# Signing: uses "Kanpe Local Signing" (create it once with scripts/setup-signing.sh) so the
+# Accessibility permission survives rebuilds. Without it, builds are ad-hoc signed and macOS
+# treats every rebuild as a new app.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -41,5 +41,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Prefer a stable identity: explicit SIGN_IDENTITY, else the local one from setup-signing.sh,
+# else ad-hoc (which makes macOS forget Accessibility permission on every rebuild).
+if [[ -z "${SIGN_IDENTITY:-}" ]] && security find-certificate -c "Kanpe Local Signing" >/dev/null 2>&1; then
+  SIGN_IDENTITY="Kanpe Local Signing"
+fi
 codesign --force --sign "${SIGN_IDENTITY:--}" "$APP"
-echo "Built $APP"
+echo "Built $APP (signed: ${SIGN_IDENTITY:-ad-hoc})"
+if [[ -z "${SIGN_IDENTITY:-}" ]]; then
+  echo "note: ad-hoc signed. Run scripts/setup-signing.sh once so Accessibility permission survives rebuilds."
+fi
