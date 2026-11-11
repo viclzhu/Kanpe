@@ -1,30 +1,142 @@
 import Foundation
 
+/// Arranges shortcut groups into newspaper-style columns.
+///
+/// Groups flow top-to-bottom, left-to-right in their original order. Long groups may continue in
+/// the next column (the continuation gets `part > 0`), so one huge menu doesn't leave a ragged
+/// gap. The number of columns is chosen so the panel's shape is close to the screen's.
 public enum ColumnLayout {
-    /// Splits groups into at most `maxColumns` columns, in reading order, so that
-    /// columns have roughly equal height. A group's height is its row count plus a header.
-    public static func columns<T>(_ groups: [T], rows: (T) -> Int, maxColumns: Int, targetRowsPerColumn: Int) -> [[T]] {
-        guard !groups.isEmpty else { return [] }
-        let heights = groups.map { rows($0) + 2 }
-        let total = heights.reduce(0, +)
-        let wanted = Int((Double(total) / Double(max(targetRowsPerColumn, 1))).rounded(.up))
-        let count = min(max(1, wanted), max(1, maxColumns), groups.count)
-        let perColumn = Double(total) / Double(count)
+    /// Size estimates, in points, used to compare candidate layouts. The real panel is measured
+    /// afterwards; these only need to be roughly right.
+    public struct Metrics: Sendable {
+        public var columnWidth: Double
+        public var columnSpacing: Double
+        public var rowHeight: Double
+        /// Space taken by the panel's header and padding.
+        public var chromeHeight: Double
+        public var chromeWidth: Double
+        /// The header row's own width; columns narrower than this waste space under it.
+        public var headerWidth: Double
+        public var maxWidth: Double
+        public var maxHeight: Double
 
-        var result: [[T]] = [[]]
-        var current = 0
-        for (group, height) in zip(groups, heights) {
-            // Start a new column when this group would push us past the even share,
-            // unless the column is empty or we are already on the last column.
-            if !result[result.count - 1].isEmpty,
-               result.count < count,
-               Double(current) + Double(height) / 2 > perColumn {
-                result.append([])
-                current = 0
-            }
-            result[result.count - 1].append(group)
-            current += height
+        public init(columnWidth: Double, columnSpacing: Double, rowHeight: Double, chromeHeight: Double,
+                    chromeWidth: Double, headerWidth: Double, maxWidth: Double, maxHeight: Double) {
+            self.columnWidth = columnWidth
+            self.columnSpacing = columnSpacing
+            self.rowHeight = rowHeight
+            self.chromeHeight = chromeHeight
+            self.chromeWidth = chromeWidth
+            self.headerWidth = headerWidth
+            self.maxWidth = maxWidth
+            self.maxHeight = maxHeight
         }
-        return result
+
+        var maxColumns: Int {
+            max(1, Int((maxWidth - chromeWidth + columnSpacing) / (columnWidth + columnSpacing)))
+        }
+    }
+
+    /// Fewest rows a group piece may have; avoids a lone row stranded at the top or bottom of a column.
+    public static let minChunk = 3
+    /// Only groups at least this long are split across columns; shorter ones move whole, since
+    /// a short group in two pieces reads worse than a slightly uneven column.
+    public static let minSplitRows = 10
+
+    /// Rows a group costs beyond its shortcuts: its title and the gap before the next group.
+    /// Site groups also have a tinted card with padding.
+    static func overhead(_ group: ShortcutGroup) -> Int {
+        group.source == .site ? 3 : 2
+    }
+
+    public static func height(of column: [ShortcutGroup]) -> Int {
+        column.reduce(0) { $0 + overhead($1) + $1.shortcuts.count }
+    }
+
+    /// Picks the column count whose overall shape best matches `targetAspect` (width / height),
+    /// while fitting within the metrics' maximum size when possible.
+    public static func best(_ groups: [ShortcutGroup], metrics m: Metrics, targetAspect: Double) -> [[ShortcutGroup]] {
+        guard !groups.isEmpty else { return [] }
+        var best: (score: Double, columns: [[ShortcutGroup]])?
+        var tallest: [[ShortcutGroup]] = []
+        for n in 1...m.maxColumns {
+            let columns = flow(groups, columns: n)
+            tallest = columns
+            let rows = Double(columns.map(height).max() ?? 0)
+            let contentWidth = Double(columns.count) * m.columnWidth + Double(columns.count - 1) * m.columnSpacing
+            let width = max(contentWidth, m.headerWidth) + m.chromeWidth
+            let height = rows * m.rowHeight + m.chromeHeight
+            if height > m.maxHeight { continue } // too tall: needs more columns
+            // Penalise empty space under a header that's wider than the columns.
+            let unused = max(0, m.headerWidth - contentWidth) / width
+            let score = abs(log((width / height) / targetAspect)) + unused
+            if best == nil || score < best!.score { best = (score, columns) }
+            if columns.count < n { break } // can't spread any further
+        }
+        return best?.columns ?? tallest
+    }
+
+    /// Flows groups into at most `n` columns of roughly equal height.
+    public static func flow(_ groups: [ShortcutGroup], columns n: Int) -> [[ShortcutGroup]] {
+        guard !groups.isEmpty else { return [] }
+        let total = height(of: groups)
+        var limit = max(minChunk, Int((Double(total) / Double(max(n, 1))).rounded(.up)))
+        while true {
+            let columns = fill(groups, limit: limit)
+            if columns.count <= n { return columns }
+            limit += 1
+        }
+    }
+
+    /// Fills columns up to `limit` rows each, splitting groups where that keeps both pieces
+    /// at least `minChunk` rows.
+    static func fill(_ groups: [ShortcutGroup], limit: Int) -> [[ShortcutGroup]] {
+        var columns: [[ShortcutGroup]] = [[]]
+        var used = 0
+
+        func newColumn() {
+            columns.append([])
+            used = 0
+        }
+        func place(_ group: ShortcutGroup, _ rows: ArraySlice<Shortcut>, part: Int) {
+            var piece = group
+            piece.shortcuts = Array(rows)
+            piece.part = part
+            columns[columns.count - 1].append(piece)
+            used += overhead(group) + rows.count
+        }
+
+        for group in groups {
+            var remaining = group.shortcuts[...]
+            var part = 0
+            if remaining.isEmpty { continue }
+            let splittable = group.shortcuts.count >= minSplitRows
+            while !remaining.isEmpty {
+                let space = limit - used - overhead(group)
+                let columnIsEmpty = columns[columns.count - 1].isEmpty
+                if remaining.count <= space || (!splittable && columnIsEmpty) {
+                    place(group, remaining, part: part)
+                    remaining = []
+                } else if splittable, space >= minChunk, min(space, remaining.count - minChunk) >= minChunk {
+                    let take = min(space, remaining.count - minChunk)
+                    place(group, remaining.prefix(take), part: part)
+                    remaining = remaining.dropFirst(take)
+                    part += 1
+                    newColumn()
+                } else if columnIsEmpty {
+                    // Nothing splits nicely and the column is empty: take what fits (or the whole
+                    // group if the rest would be too small) so we always make progress.
+                    let fit = max(space, minChunk)
+                    let take = remaining.count - fit < minChunk ? remaining.count : fit
+                    place(group, remaining.prefix(take), part: part)
+                    remaining = remaining.dropFirst(take)
+                    part += 1
+                    if !remaining.isEmpty { newColumn() }
+                } else {
+                    newColumn()
+                }
+            }
+        }
+        return columns.filter { !$0.isEmpty }
     }
 }

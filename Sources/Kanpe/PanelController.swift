@@ -41,16 +41,13 @@ final class PanelController {
         let visible = screen.visibleFrame
         let maxSize = CGSize(width: visible.width * 0.94, height: visible.height * 0.88)
 
-        let rowHeight: CGFloat = 19
-        let maxColumns = max(1, Int((maxSize.width - 36) / (PanelView.columnWidth + 18)))
-        let targetRows = max(10, Int((maxSize.height - 90) / rowHeight))
-        let columns = ColumnLayout.columns(content.groups, rows: { $0.shortcuts.count },
-                                           maxColumns: maxColumns, targetRowsPerColumn: targetRows)
+        let (columns, columnWidth) = Self.layout(for: content, icon: icon, maxSize: maxSize)
 
         let view = PanelView(content: content, icon: icon, columns: columns,
                              onLevelChange: { [weak self] site, level in self?.onLevelChange(site, level) },
                              onEdit: { [weak self] site in self?.onEdit(site) },
-                             onToggleAppMenus: { [weak self] in self?.onToggleAppMenus() })
+                             onToggleAppMenus: { [weak self] in self?.onToggleAppMenus() },
+                             columnWidth: columnWidth)
         let hosting = ClickThroughHostingView(rootView: view)
         var size = hosting.fittingSize
 
@@ -72,6 +69,23 @@ final class PanelController {
             ctx.duration = 0.12
             panel.animator().alphaValue = 1
         }
+    }
+
+    /// Chooses columns so the panel's shape is close to the screen's, within `maxSize`, and
+    /// widens them (up to 30%) when the header is wider, so there's no empty strip on the right.
+    static func layout(for content: PanelContent, icon: NSImage?, maxSize: CGSize) -> (columns: [[ShortcutGroup]], width: CGFloat) {
+        let spacing: CGFloat = 18
+        let header = NSHostingView(rootView: PanelHeader(content: content, icon: icon)).fittingSize
+        let metrics = ColumnLayout.Metrics(
+            columnWidth: PanelView.columnWidth, columnSpacing: spacing, rowHeight: 20.5,
+            chromeHeight: 36 + 12 + header.height, chromeWidth: 36, headerWidth: header.width,
+            maxWidth: maxSize.width, maxHeight: maxSize.height)
+        let columns = ColumnLayout.best(content.groups, metrics: metrics, targetAspect: maxSize.width / maxSize.height)
+        guard !columns.isEmpty else { return (columns, PanelView.columnWidth) }
+        let n = CGFloat(columns.count)
+        let fill = (header.width - spacing * (n - 1)) / n
+        let width = min(max(PanelView.columnWidth, fill), PanelView.columnWidth * 1.3)
+        return (columns, width.rounded(.down))
     }
 
     func hide() {

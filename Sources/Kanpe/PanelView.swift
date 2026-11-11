@@ -8,11 +8,14 @@ struct PanelView: View {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    /// Base column width; the panel may widen columns to fill a header that's wider than them.
     static let columnWidth: CGFloat = 270
+    var columnWidth: CGFloat = PanelView.columnWidth
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            header
+            PanelHeader(content: content, icon: icon, onLevelChange: onLevelChange,
+                        onEdit: onEdit, onToggleAppMenus: onToggleAppMenus)
             if content.groups.isEmpty {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
@@ -24,7 +27,7 @@ struct PanelView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             ForEach(columns[index]) { GroupView(group: $0) }
                         }
-                        .frame(width: Self.columnWidth, alignment: .topLeading)
+                        .frame(width: columnWidth, alignment: .topLeading)
                     }
                 }
             }
@@ -34,7 +37,29 @@ struct PanelView: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.12)))
     }
 
-    private var header: some View {
+    private var emptyMessage: String {
+        if !AX.isTrusted {
+            return "Kanpe needs Accessibility access. Open the Kanpe menu-bar icon → Open Accessibility Settings."
+        }
+        if let menus = content.appMenus, !menus.visible {
+            return content.host != nil
+                ? "No shortcuts for this site yet, and \(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them, or + to add shortcuts for this site."
+                : "\(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them."
+        }
+        return "No keyboard shortcuts found in this app's menus."
+    }
+}
+
+/// App name, current site, level picker, Menus toggle and edit button. A separate view so the
+/// panel can measure its width when choosing a column layout.
+struct PanelHeader: View {
+    let content: PanelContent
+    let icon: NSImage?
+    var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
+    var onEdit: (String?) -> Void = { _ in }
+    var onToggleAppMenus: () -> Void = {}
+
+    var body: some View {
         HStack(spacing: 10) {
             if let icon {
                 Image(nsImage: icon).resizable().frame(width: 28, height: 28)
@@ -74,17 +99,6 @@ struct PanelView: View {
         }
     }
 
-    private var emptyMessage: String {
-        if !AX.isTrusted {
-            return "Kanpe needs Accessibility access. Open the Kanpe menu-bar icon → Open Accessibility Settings."
-        }
-        if let menus = content.appMenus, !menus.visible {
-            return content.host != nil
-                ? "No shortcuts for this site yet, and \(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them, or + to add shortcuts for this site."
-                : "\(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them."
-        }
-        return "No keyboard shortcuts found in this app's menus."
-    }
 }
 
 private struct GroupView: View {
@@ -99,6 +113,9 @@ private struct GroupView: View {
                 Text(group.title.uppercased())
                     .font(.caption.weight(.bold))
                     .lineLimit(1)
+                if group.part > 0 {
+                    Text("continued").font(.caption2).foregroundStyle(.tertiary)
+                }
             }
             .foregroundStyle(group.source == .site ? Color.accentColor : .secondary)
             .padding(.bottom, 2)

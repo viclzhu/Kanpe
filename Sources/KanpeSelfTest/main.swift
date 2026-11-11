@@ -56,11 +56,54 @@ check(SiteMatcher.matches(pattern: "github.com", url: URL(string: "about:blank")
 check(SiteMatcher.normalizedHost(gh), "github.com", "normalized host")
 
 // MARK: Layout
-let cols = ColumnLayout.columns([10, 10, 10, 10], rows: { $0 }, maxColumns: 4, targetRowsPerColumn: 24)
-check(cols.count, 2, "two columns for 48 rows at 24/col")
-check(cols.flatMap { $0 }, [10, 10, 10, 10], "order preserved")
-check(ColumnLayout.columns([50], rows: { $0 }, maxColumns: 4, targetRowsPerColumn: 10).count, 1, "never more columns than groups")
-check(ColumnLayout.columns([5, 5, 5], rows: { $0 }, maxColumns: 1, targetRowsPerColumn: 5).count, 1, "respects maxColumns")
+func g(_ title: String, _ rows: Int, _ source: ShortcutGroup.Source = .app) -> ShortcutGroup {
+    ShortcutGroup(title: title, shortcuts: (0..<rows).map { Shortcut(title: "\(title)\($0)", chord: "X") }, source: source)
+}
+func rowsInOrder(_ cols: [[ShortcutGroup]]) -> [String] { cols.flatMap { $0.flatMap { $0.shortcuts.map(\.title) } } }
+let sample = [g("A", 10), g("B", 10), g("C", 10), g("D", 10)]
+let flowed2 = ColumnLayout.flow(sample, columns: 2)
+check(flowed2.count, 2, "two columns")
+check(flowed2.map(ColumnLayout.height), [24, 24], "balanced heights")
+check(rowsInOrder(flowed2), rowsInOrder([sample]), "every row kept, in order")
+
+// A single long group is split across columns, marked as continued, with no tiny pieces.
+let long = ColumnLayout.flow([g("Edit", 40)], columns: 3)
+check(long.count, 3, "long group spread over 3 columns")
+check(long.flatMap { $0.map(\.part) }, [0, 1, 2], "continuation parts numbered")
+check(long.allSatisfy { $0.allSatisfy { $0.shortcuts.count >= ColumnLayout.minChunk } }, true, "no piece below minChunk")
+check(rowsInOrder(long), rowsInOrder([[g("Edit", 40)]]), "split keeps row order")
+check(Set(long.flatMap { $0.map(\.id) }).count, 3, "continuation pieces have unique ids")
+
+// Short groups move whole instead of splitting.
+let shortGroups = ColumnLayout.flow([g("A", 8), g("B", 8), g("C", 8)], columns: 2)
+check(shortGroups.flatMap { $0.map(\.part) }, [0, 0, 0], "short groups are never split")
+check(rowsInOrder(shortGroups), rowsInOrder([[g("A", 8), g("B", 8), g("C", 8)]]), "short groups keep order")
+
+// Splits never leave a stranded row.
+for rows in 1...30 {
+    for n in 1...4 {
+        let cols = ColumnLayout.flow([g("P", 5), g("Q", rows), g("R", 4)], columns: n)
+        let pieces = cols.flatMap { $0 }
+        let tiny = pieces.filter { $0.shortcuts.count < ColumnLayout.minChunk && $0.part > 0 }
+        if cols.count > n || !tiny.isEmpty || rowsInOrder(cols) != rowsInOrder([[g("P", 5), g("Q", rows), g("R", 4)]]) {
+            failures += 1
+            print("FAIL flow rows=\(rows) n=\(n): \(cols.map { $0.map { "\($0.title)#\($0.part):\($0.shortcuts.count)" } })")
+        }
+    }
+}
+
+// Choosing a shape: 26 rows of site shortcuts should not be one tall column on a wide screen.
+let screenMetrics = ColumnLayout.Metrics(columnWidth: 270, columnSpacing: 18, rowHeight: 20.5, chromeHeight: 90,
+                                         chromeWidth: 36, headerWidth: 600, maxWidth: 1700, maxHeight: 950)
+let github = [g("Site-wide", 5, .site), g("Repository", 8, .site), g("Code", 5, .site), g("Issues", 8, .site)]
+let chosen = ColumnLayout.best(github, metrics: screenMetrics, targetAspect: 1700.0 / 950.0)
+check(chosen.count >= 2, true, "small sheet uses several columns (got \(chosen.count))")
+// A big sheet must fit the height limit by using more columns.
+let big = (0..<12).map { g("M\($0)", 14) }
+let bigCols = ColumnLayout.best(big, metrics: screenMetrics, targetAspect: 1700.0 / 950.0)
+let bigHeight = Double(bigCols.map(ColumnLayout.height).max()!) * 20.5 + 90
+check(bigHeight <= 950, true, "big sheet fits height (\(bigHeight))")
+check(ColumnLayout.best([], metrics: screenMetrics, targetAspect: 1.6).count, 0, "empty")
 
 // MARK: Trigger gestures
 func run(_ mode: TriggerMode, _ events: [TriggerStateMachine.Event]) -> [TriggerStateMachine.Effect] {

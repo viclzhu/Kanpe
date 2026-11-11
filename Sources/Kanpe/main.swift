@@ -28,8 +28,10 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     renderContent.groups = matched.flatMap { $0.displayGroups(level: level) } + (hideMenus ? [] : menus)
     renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count })
     _ = NSApplication.shared
-    let columns = ColumnLayout.columns(renderContent.groups, rows: { $0.shortcuts.count }, maxColumns: 5, targetRowsPerColumn: 42)
-    let view = PanelView(content: renderContent, icon: target.icon, columns: columns)
+    let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
+    let (columns, columnWidth) = PanelController.layout(for: renderContent, icon: target.icon,
+                                                        maxSize: CGSize(width: visible.width * 0.94, height: visible.height * 0.88))
+    let view = PanelView(content: renderContent, icon: target.icon, columns: columns, columnWidth: columnWidth)
         .background(Color(nsColor: .windowBackgroundColor))
     let hosting = NSHostingView(rootView: view)
     hosting.frame = CGRect(origin: .zero, size: hosting.fittingSize)

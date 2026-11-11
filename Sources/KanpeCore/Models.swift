@@ -18,17 +18,20 @@ public struct Shortcut: Hashable, Sendable {
 }
 
 public struct ShortcutGroup: Hashable, Sendable, Identifiable {
-    public var id: String { "\(source.rawValue)|\(title)" }
+    public var id: String { "\(source.rawValue)|\(title)|\(part)" }
     public enum Source: String, Sendable { case site, app }
 
     public var title: String
     public var shortcuts: [Shortcut]
     public var source: Source
+    /// 0 for a whole group or its first piece; 1, 2… when a long group continues in another column.
+    public var part: Int
 
-    public init(title: String, shortcuts: [Shortcut], source: Source) {
+    public init(title: String, shortcuts: [Shortcut], source: Source, part: Int = 0) {
         self.title = title
         self.shortcuts = shortcuts
         self.source = source
+        self.part = part
     }
 }
 
