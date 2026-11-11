@@ -201,9 +201,9 @@ Firefox only works through Accessibility, and how reliable that is depends on th
 
 ## Releasing
 
-1. Build the zip with the next version: `VERSION=0.2.0 scripts/release.sh`. It prints the zip's sha256. Build on the Mac that has "Kanpe Local Signing", so users keep their Accessibility permission.
-2. In `Casks/kanpe.rb`, set `version` and `sha256`, then commit and push.
-3. Publish it: `gh release create v0.2.0 build/Kanpe-0.2.0.zip --title "Kanpe 0.2.0" --notes "…"`.
+1. Set the fallback `VERSION` in `scripts/bundle.sh` to the new version, then build the zip: `VERSION=0.3.0 scripts/release.sh`. It prints the zip's sha256. Build on the Mac that has "Kanpe Local Signing", so users keep their Accessibility permission (`codesign -dvv build/Kanpe.app` should show `Authority=Kanpe Local Signing`).
+2. Publish it **first**: `gh release create v0.3.0 build/Kanpe-0.3.0.zip --target main --title "Kanpe 0.3.0" --notes "…"`. In the notes, give the upgrade command as `brew update && brew upgrade --cask kanpe`.
+3. Then, in `Casks/kanpe.rb`, set `version` and `sha256`, commit and push. Pushing the cask before the zip exists would give anyone who updates in between a download error.
 4. Check it: `brew update && brew fetch --cask viclzhu/kanpe/kanpe`. This downloads the zip and verifies the sha256.
 
 Upload the same zip you took the sha256 from. Every build gets a new signature timestamp, so a rebuilt zip has a different checksum.
