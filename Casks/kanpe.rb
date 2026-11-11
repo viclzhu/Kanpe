@@ -24,7 +24,15 @@ cask "kanpe" do
   ]
 
   caveats <<~EOS
-    Kanpe needs Accessibility access to read menu shortcuts and the browser tab's URL.
+    Kanpe isn't signed with an Apple Developer ID, so macOS blocks its first launch with
+    "Apple could not verify "Kanpe" is free of malware…". To allow it:
+      1. Open Kanpe, then click Done in the warning. Don't click Move to Trash.
+      2. Open System Settings → Privacy & Security, scroll down to Security,
+         and click Open Anyway next to "Kanpe" was blocked.
+      3. Enter your password, then click Open Anyway again.
+    You do this once per version, so again after each upgrade.
+
+    Kanpe also needs Accessibility access to read menu shortcuts and the browser tab's URL.
     After first launch, turn it on in System Settings → Privacy & Security → Accessibility.
   EOS
 end

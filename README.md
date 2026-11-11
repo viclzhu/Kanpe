@@ -22,12 +22,21 @@ brew install --cask viclzhu/kanpe/kanpe
 
 Then open **Kanpe** from Applications. It lives in the menu bar and has no Dock icon.
 
-**First launch: "Apple could not verify Kanpe".** Kanpe isn't signed with an Apple Developer ID yet, so macOS blocks it the first time. To allow it:
-1. Open Kanpe, then click **Done** in the warning.
-2. Go to **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** next to "Kanpe was blocked".
-3. Confirm with your password, then click **Open Anyway** again.
-
-After installing or upgrading, macOS asks again for the new version.
+> [!IMPORTANT]
+> **The first launch is blocked by macOS.** You'll see *"Apple could not verify "Kanpe" is free of malware that may harm your Mac or compromise your privacy."* This happens because Kanpe isn't signed with a paid Apple Developer ID yet. It doesn't mean anything was found in the app. To allow it:
+>
+> 1. Click **Done** in the warning. Don't click **Move to Trash**.
+> 2. Open **System Settings → Privacy & Security** and scroll down to **Security**.
+> 3. Next to *"Kanpe" was blocked to protect your Mac*, click **Open Anyway**.
+> 4. Enter your password, then click **Open Anyway** again in the next warning.
+>
+> You do this once per version, so again after each `brew upgrade`. Homebrew prints these steps after it installs Kanpe.
+>
+> If you'd rather skip the dialog, you can remove the download quarantine flag instead. This tells macOS to trust the app without checking it:
+>
+> ```sh
+> xattr -dr com.apple.quarantine /Applications/Kanpe.app
+> ```
 
 **Accessibility permission.** On first launch, turn Kanpe on in **System Settings → Privacy & Security → Accessibility**. Kanpe needs it to see the ⌘ trigger, read the app's menus and read the browser tab's address. Every release is signed with the same certificate, so this permission carries over when you upgrade.
 
