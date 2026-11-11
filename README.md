@@ -143,7 +143,7 @@ Tag shortcuts in a pack with `"level": "core" | "extended" | "complete"`. You ca
 - **Extended:** other ⌘ shortcuts with at most one extra modifier (⇧⌘ or ⌥⌘) and at most one submenu deep, e.g. Developer › Developer Tools.
 - **Complete:** everything else: three-modifier chords, shortcuts without ⌘ (such as ⌃ window tiling and fn keys), and items in deeper submenus.
 
-Apps start at **Extended**. For Chrome that's 22 shortcuts at Core, 59 at Extended and all 80 at Complete. When a site's picker and the menus' picker are both showing, the site's picker is labelled with the site name.
+Apps start at **Core**, like sites. For Chrome that's 22 shortcuts at Core, 59 at Extended and all 80 at Complete. When a site's picker and the menus' picker are both showing, the site's picker is labelled with the site name.
 
 ### Pages: shortcuts for the part of the site you're on
 

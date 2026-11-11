@@ -11,9 +11,8 @@ import Foundation
 /// - **Complete:** everything else: three-modifier chords, shortcuts without ⌘ (window tiling
 ///   on ⌃, fn/dictation keys) and items nested two or more submenus deep.
 public enum MenuLevels {
-    /// What an app's menus show before the user picks a level. Menus are long and generic, so
-    /// the default trims them without hiding the everyday ⇧⌘ / ⌥⌘ shortcuts.
-    public static let `default`: DetailLevel = .extended
+    /// What an app's menus show before the user picks a level: the short list, same as sites.
+    public static let `default`: DetailLevel = DetailLevel.default
 
     /// Chords that mean the same thing in nearly every Mac app.
     static let coreChords: Set<String> = [
