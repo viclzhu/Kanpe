@@ -2,12 +2,22 @@ import AppKit
 import SwiftUI
 import KanpeCore
 
-/// Hosts the shortcut editor. Kanpe is a menu-bar app, so while this window is open it
-/// temporarily becomes a regular app (Dock icon, ⌘Tab) to behave like a normal window.
+/// Hosts the shortcut editor. Kanpe is menu-bar only by default, including while editing.
+/// With `showsDockIconWhileEditing` on, it becomes a regular app (Dock icon, ⌘Tab) while this
+/// window is open.
 @MainActor
 final class EditorWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private let model: EditorModel
+
+    /// UserDefaults key. Off by default: the editor opens without a Dock icon.
+    static let dockIconKey = "showDockIconWhileEditing"
+    static var showsDockIconWhileEditing: Bool {
+        get { UserDefaults.standard.bool(forKey: dockIconKey) }
+        set { UserDefaults.standard.set(newValue, forKey: dockIconKey) }
+    }
+
+    var isOpen: Bool { window?.isVisible ?? false }
 
     init(store: SitePackStore, bundledDirectory: URL?, onChange: @escaping () -> Void) {
         model = EditorModel(store: store, bundledDirectory: bundledDirectory)
@@ -35,7 +45,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         if let name, let site = model.sites.first(where: { $0.name == name }) {
             model.selection = site.id
         }
-        NSApp.setActivationPolicy(.regular)
+        applyActivationPolicy()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -44,5 +54,12 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         model.flushSaves()
         window = nil
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    /// Dock icon only while the editor is open, and only if the user asked for it.
+    func applyActivationPolicy() {
+        let editing = window != nil
+        NSApp.setActivationPolicy(editing && Self.showsDockIconWhileEditing ? .regular : .accessory)
+        if editing { window?.makeKeyAndOrderFront(nil) } // switching policy can hide the window
     }
 }

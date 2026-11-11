@@ -57,6 +57,8 @@ Open the editor from the menu-bar icon → **Edit Shortcuts…** (⌘,), or clic
   - Drag rows to reorder them, and click the colored pill to set the level.
 - **Groups:** rename one by clicking its title. Its **•••** menu sets the level for all its shortcuts, moves the group up or down, or deletes it.
 
+Kanpe stays menu-bar only, with no Dock icon, even while the editor is open. To get back to the editor, use the menu-bar icon → **Edit Shortcuts…** again. If you'd rather have a Dock icon and ⌘Tab while editing, turn on **Show Dock Icon While Editing** in the menu-bar menu. ⌘C/⌘V/⌘X/⌘Z/⌘A and ⌘W work in the editor either way.
+
 Changes save automatically and show in the panel right away. A site you've edited won't be overwritten by app updates.
 
 ## Site shortcut files
