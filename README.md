@@ -43,9 +43,11 @@ Then open **Kanpe** from Applications. It lives in the menu bar and has no Dock 
 **Updating and removing:**
 
 ```sh
-brew upgrade --cask kanpe
+brew update && brew upgrade --cask kanpe
 brew uninstall --cask kanpe          # add --zap to also delete your site shortcuts and settings
 ```
+
+Run `brew update` first so Homebrew sees a new version. It refreshes taps on its own only now and then (at most once a day), and `brew fetch` and `brew info` never do, so they can keep showing the old version.
 
 Why the `brew tap` line: the repo isn't named `homebrew-…`, so Homebrew needs its URL once. Installing with the full name `viclzhu/kanpe/kanpe` also tells Homebrew to trust this one cask; it doesn't trust everything else in the repo.
 

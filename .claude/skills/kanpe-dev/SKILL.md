@@ -97,6 +97,8 @@ pkill -x Kanpe; scripts/bundle.sh && open build/Kanpe.app
 
 ## Releases and the Homebrew cask
 
+- **Stale taps:** a tap is a git clone that refreshes only on `brew update` or the throttled auto-update (`install`/`upgrade`, not `fetch`/`info`). After a release, users must run `brew update` to see it. To reproduce: tap, `git -C "$(brew --repository)/Library/Taps/viclzhu/homebrew-kanpe" reset --hard <old sha>`, then `brew fetch kanpe` shows the old version.
+
 - **The tap:** this repo is also a Homebrew tap. `Casks/kanpe.rb` downloads `Kanpe-<version>.zip` from GitHub Releases. Follow the steps in README → Releasing. Upload exactly the zip that `scripts/release.sh` printed the sha256 for, because every build changes the signature and therefore the checksum.
 - **Gatekeeper:** Homebrew 7 quarantines cask downloads and has no `--no-quarantine`. The self-signed app fails Gatekeeper (`spctl --assess` says rejected), so users click Open Anyway once per version. Don't add a postflight that strips quarantine, since Homebrew's docs call that a security bypass. The real fix is a Developer ID with notarization.
 - **Caveats and dependencies:** `depends_on macos: :ventura` (Homebrew 7 rejects `">= :ventura"`). There is no `accessibility` caveat helper. `unsigned_accessibility` says the grant must be redone on every update, which isn't true for Kanpe because the signing certificate is stable. Write the caveat as plain text.
