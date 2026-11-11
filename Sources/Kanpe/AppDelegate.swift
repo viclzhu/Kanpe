@@ -47,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onLevelChange = { [weak self] site, level in
             self?.setLevel(level, forSite: site)
         }
+        panel.onToggleAppMenus = { [weak self] in self?.toggleAppMenus() }
         panel.onEdit = { [weak self] site in
             self?.wantsShow = false
             self?.panel.hide()
@@ -124,14 +125,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let shown else { return }
         let bundleID = shown.app.bundleIdentifier
         let matched = shown.url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
+        let menuCount = shown.menus.reduce(0) { $0 + $1.shortcuts.count }
+        let menusVisible = showsAppMenus(for: bundleID)
         let content = PanelContent(
             appName: shown.app.localizedName ?? bundleID ?? "App",
             bundleID: bundleID,
             host: shown.url.flatMap(SiteMatcher.normalizedHost),
             sites: matched.map { SiteInfo(name: $0.name, level: level(forSite: $0.name), availableLevels: $0.availableLevels) },
-            groups: matched.flatMap { $0.displayGroups(level: level(forSite: $0.name)) } + shown.menus
+            groups: matched.flatMap { $0.displayGroups(level: level(forSite: $0.name)) } + (menusVisible ? shown.menus : []),
+            appMenus: menuCount == 0 ? nil : .init(visible: menusVisible, count: menuCount)
         )
         panel.show(content, icon: shown.app.icon, animated: !panel.isVisible)
+    }
+
+    // MARK: - App menu shortcuts (shown/hidden per app)
+
+    /// Browsers start with their own menu shortcuts hidden (they're the same on every site);
+    /// other apps start with them shown. Either can be toggled from the panel.
+    private func showsAppMenus(for bundleID: String?) -> Bool {
+        guard let bundleID else { return true }
+        if let stored = (defaults.dictionary(forKey: "appMenusVisible") as? [String: Bool])?[bundleID] {
+            return stored
+        }
+        return !BrowserURLReader.isBrowser(bundleID)
+    }
+
+    private func toggleAppMenus() {
+        guard let bundleID = shown?.app.bundleIdentifier else { return }
+        var visible = (defaults.dictionary(forKey: "appMenusVisible") as? [String: Bool]) ?? [:]
+        visible[bundleID] = !showsAppMenus(for: bundleID)
+        defaults.set(visible, forKey: "appMenusVisible")
+        render()
     }
 
     // MARK: - Detail levels (remembered per site)

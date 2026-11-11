@@ -31,6 +31,7 @@ final class PanelController {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     /// Site name to open in the editor, or nil for the editor's default selection.
     var onEdit: (String?) -> Void = { _ in }
+    var onToggleAppMenus: () -> Void = {}
 
     var isVisible: Bool { panel.isVisible }
 
@@ -48,7 +49,8 @@ final class PanelController {
 
         let view = PanelView(content: content, icon: icon, columns: columns,
                              onLevelChange: { [weak self] site, level in self?.onLevelChange(site, level) },
-                             onEdit: { [weak self] site in self?.onEdit(site) })
+                             onEdit: { [weak self] site in self?.onEdit(site) },
+                             onToggleAppMenus: { [weak self] in self?.onToggleAppMenus() })
         let hosting = ClickThroughHostingView(rootView: view)
         var size = hosting.fittingSize
 

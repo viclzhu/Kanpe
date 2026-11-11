@@ -41,13 +41,27 @@ public struct PanelContent: Sendable {
     /// Site packs that matched `host`, with the detail level each is shown at.
     public var sites: [SiteInfo]
     public var groups: [ShortcutGroup]
+    /// Whether the app's own menu shortcuts are included in `groups`, and how many there are.
+    /// `nil` when the app has none (nothing to toggle).
+    public var appMenus: AppMenus?
 
-    public init(appName: String, bundleID: String?, host: String?, sites: [SiteInfo], groups: [ShortcutGroup]) {
+    public struct AppMenus: Sendable {
+        public var visible: Bool
+        public var count: Int
+        public init(visible: Bool, count: Int) {
+            self.visible = visible
+            self.count = count
+        }
+    }
+
+    public init(appName: String, bundleID: String?, host: String?, sites: [SiteInfo], groups: [ShortcutGroup],
+                appMenus: AppMenus? = nil) {
         self.appName = appName
         self.bundleID = bundleID
         self.host = host
         self.sites = sites
         self.groups = groups
+        self.appMenus = appMenus
     }
 }
 

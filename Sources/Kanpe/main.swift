@@ -21,10 +21,15 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
                                host: url.flatMap(SiteMatcher.normalizedHost),
                                sites: matched.map { SiteInfo(name: $0.name, level: level, availableLevels: $0.availableLevels) },
-                               groups: matched.flatMap { $0.displayGroups(level: level) } + MenuReader.groups(pid: pid))
+                               groups: [], appMenus: nil)
+    var renderContent = content
+    let menus = MenuReader.groups(pid: pid)
+    let hideMenus = args.contains("--hide-menus")
+    renderContent.groups = matched.flatMap { $0.displayGroups(level: level) } + (hideMenus ? [] : menus)
+    renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count })
     _ = NSApplication.shared
-    let columns = ColumnLayout.columns(content.groups, rows: { $0.shortcuts.count }, maxColumns: 5, targetRowsPerColumn: 42)
-    let view = PanelView(content: content, icon: target.icon, columns: columns)
+    let columns = ColumnLayout.columns(renderContent.groups, rows: { $0.shortcuts.count }, maxColumns: 5, targetRowsPerColumn: 42)
+    let view = PanelView(content: renderContent, icon: target.icon, columns: columns)
         .background(Color(nsColor: .windowBackgroundColor))
     let hosting = NSHostingView(rootView: view)
     hosting.frame = CGRect(origin: .zero, size: hosting.fittingSize)

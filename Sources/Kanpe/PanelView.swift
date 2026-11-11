@@ -7,6 +7,7 @@ struct PanelView: View {
     let columns: [[ShortcutGroup]]
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
+    var onToggleAppMenus: () -> Void = {}
     static let columnWidth: CGFloat = 270
 
     var body: some View {
@@ -15,7 +16,8 @@ struct PanelView: View {
             if content.groups.isEmpty {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
-                    .frame(width: Self.columnWidth * 1.5, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: Self.columnWidth * 1.6, alignment: .leading)
             } else {
                 HStack(alignment: .top, spacing: 18) {
                     ForEach(columns.indices, id: \.self) { index in
@@ -41,6 +43,8 @@ struct PanelView: View {
             if let host = content.host {
                 Label(host, systemImage: "globe")
                     .font(.callout)
+                    .lineLimit(1)
+                    .fixedSize()
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(content.sites.isEmpty ? Color.secondary.opacity(0.15) : Color.accentColor.opacity(0.2),
                                 in: Capsule())
@@ -55,6 +59,9 @@ struct PanelView: View {
                     LevelPicker(levels: site.availableLevels, selected: site.level) { onLevelChange(site.name, $0) }
                 }
             }
+            if let menus = content.appMenus {
+                AppMenusToggle(appName: content.appName, menus: menus, action: onToggleAppMenus)
+            }
             if content.host != nil {
                 Button { onEdit(content.sites.first?.name) } label: {
                     Image(systemName: content.sites.isEmpty ? "plus.circle" : "pencil.circle")
@@ -68,8 +75,15 @@ struct PanelView: View {
     }
 
     private var emptyMessage: String {
-        AX.isTrusted ? "No keyboard shortcuts found in this app's menus." :
-            "Kanpe needs Accessibility access. Open the Kanpe menu-bar icon → Grant Accessibility Access."
+        if !AX.isTrusted {
+            return "Kanpe needs Accessibility access. Open the Kanpe menu-bar icon → Open Accessibility Settings."
+        }
+        if let menus = content.appMenus, !menus.visible {
+            return content.host != nil
+                ? "No shortcuts for this site yet, and \(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them, or + to add shortcuts for this site."
+                : "\(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them."
+        }
+        return "No keyboard shortcuts found in this app's menus."
     }
 }
 
@@ -165,5 +179,32 @@ extension DetailLevel {
         case .extended: return "Everyday shortcuts"
         case .complete: return "Everything in this cheat sheet"
         }
+    }
+}
+
+/// Shows/hides the frontmost app's own menu shortcuts (e.g. Chrome's File/Edit/View…).
+private struct AppMenusToggle: View {
+    let appName: String
+    let menus: PanelContent.AppMenus
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: menus.visible ? "menubar.rectangle" : "eye.slash")
+                Text("Menus")
+                if !menus.visible {
+                    Text("\(menus.count)").monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(menus.visible ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.08),
+                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .foregroundStyle(menus.visible ? .primary : .secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(menus.visible ? "Hide \(appName)'s menu shortcuts" : "Show \(appName)'s \(menus.count) menu shortcuts")
     }
 }
