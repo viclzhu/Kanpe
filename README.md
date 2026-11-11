@@ -127,4 +127,5 @@ Sources/Kanpe         app: activation (event monitors → trigger state machine)
 Sources/KanpeSelfTest assertion checks for KanpeCore
 Resources/Sites         bundled site packs
 scripts/bundle.sh       builds and signs Kanpe.app
+scripts/make-icon.swift draws Resources/AppIcon.icns (カンペ on a cue card)
 ```
