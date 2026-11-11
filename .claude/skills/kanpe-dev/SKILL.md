@@ -94,6 +94,13 @@ pkill -x Kanpe; scripts/bundle.sh && open build/Kanpe.app
 - **Keyboard shortcuts in the editor:** a hidden main menu (`makeMainMenu`) is what makes ⌘C/V/X/Z/A/W work, because the app is an accessory with no visible menu bar.
 - **Dock icon:** the app is `LSUIElement`. The editor turns on a Dock icon (`.regular`) only if **Show Dock Icon While Editing** is on, and switching the activation policy can hide the window, so it's brought to the front again afterwards.
 
+## Releases and the Homebrew cask
+
+- **The tap:** this repo is also a Homebrew tap. `Casks/kanpe.rb` downloads `Kanpe-<version>.zip` from GitHub Releases. Follow the steps in README → Releasing. Upload exactly the zip that `scripts/release.sh` printed the sha256 for, because every build changes the signature and therefore the checksum.
+- **Gatekeeper:** Homebrew 7 quarantines cask downloads and has no `--no-quarantine`. The self-signed app fails Gatekeeper (`spctl --assess` says rejected), so users click Open Anyway once per version. Don't add a postflight that strips quarantine, since Homebrew's docs call that a security bypass. The real fix is a Developer ID with notarization.
+- **Caveats and dependencies:** `depends_on macos: :ventura` (Homebrew 7 rejects `">= :ventura"`). There is no `accessibility` caveat helper. `unsigned_accessibility` says the grant must be redone on every update, which isn't true for Kanpe because the signing certificate is stable. Write the caveat as plain text.
+- **Testing a cask change without publishing:** commit the cask to a throwaway git repo with `url "file:///…/build/Kanpe-x.zip"`. Then run `brew tap test/kanpe /tmp/that-repo`, `brew style --cask`, and `brew install --cask --appdir=/tmp/apps test/kanpe/kanpe`. Afterwards run `brew uninstall --cask`, then `brew untap`. Uninstalling quits every running `dev.victorzhu.Kanpe`, including the dev build, so relaunch it afterwards.
+
 ## Repo conventions
 
 - **Commits:** Git author is Victor Long Zhu <victorvctr.zh@gmail.com>, set in this repo's local config. Write one focused commit per feature, with a short summary line and a body explaining why. Push only when asked. The remote is `git@github.com:viclzhu/Kanpe.git` (SSH).

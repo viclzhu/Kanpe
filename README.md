@@ -13,6 +13,33 @@ In browsers the app's own menu shortcuts (File, Edit, View…) start **hidden**,
 
 Release `⌘` (or press any key) to dismiss it. Shortcuts you type with `⌘` (⌘C, ⌘Tab, ⌘-click…) never trigger it.
 
+## Install with Homebrew
+
+```sh
+brew tap viclzhu/kanpe https://github.com/viclzhu/Kanpe
+brew install --cask viclzhu/kanpe/kanpe
+```
+
+Then open **Kanpe** from Applications. It lives in the menu bar and has no Dock icon.
+
+**First launch: "Apple could not verify Kanpe".** Kanpe isn't signed with an Apple Developer ID yet, so macOS blocks it the first time. To allow it:
+1. Open Kanpe, then click **Done** in the warning.
+2. Go to **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** next to "Kanpe was blocked".
+3. Confirm with your password, then click **Open Anyway** again.
+
+After installing or upgrading, macOS asks again for the new version.
+
+**Accessibility permission.** On first launch, turn Kanpe on in **System Settings → Privacy & Security → Accessibility**. Kanpe needs it to see the ⌘ trigger, read the app's menus and read the browser tab's address. Every release is signed with the same certificate, so this permission carries over when you upgrade.
+
+**Updating and removing:**
+
+```sh
+brew upgrade --cask kanpe
+brew uninstall --cask kanpe          # add --zap to also delete your site shortcuts and settings
+```
+
+Why the `brew tap` line: the repo isn't named `homebrew-…`, so Homebrew needs its URL once. Installing with the full name `viclzhu/kanpe/kanpe` also tells Homebrew to trust this one cask; it doesn't trust everything else in the repo.
+
 ## Build & run
 
 Requires macOS 13+ and Swift 5.10+ (Command Line Tools are enough; Xcode is not required).
@@ -153,6 +180,15 @@ The URL is read only when you open the panel, and only from the frontmost app if
 
 Firefox only works through Accessibility, and how reliable that is depends on the Firefox version.
 
+## Releasing
+
+1. Build the zip with the next version: `VERSION=0.2.0 scripts/release.sh`. It prints the zip's sha256. Build on the Mac that has "Kanpe Local Signing", so users keep their Accessibility permission.
+2. In `Casks/kanpe.rb`, set `version` and `sha256`, then commit and push.
+3. Publish it: `gh release create v0.2.0 build/Kanpe-0.2.0.zip --title "Kanpe 0.2.0" --notes "…"`.
+4. Check it: `brew update && brew fetch --cask viclzhu/kanpe/kanpe`. This downloads the zip and verifies the sha256.
+
+Upload the same zip you took the sha256 from. Every build gets a new signature timestamp, so a rebuilt zip has a different checksum.
+
 ## Layout
 
 ```
@@ -161,5 +197,7 @@ Sources/Kanpe         app: activation (event monitors → trigger state machine)
 Sources/KanpeSelfTest assertion checks for KanpeCore
 Resources/Sites         bundled site packs
 scripts/bundle.sh       builds and signs Kanpe.app
+scripts/release.sh      zips a signed build for GitHub Releases and prints its sha256
+Casks/kanpe.rb          Homebrew cask (this repo doubles as a tap)
 scripts/make-icon.swift draws Resources/AppIcon.icns (カンペ on a cue card)
 ```
