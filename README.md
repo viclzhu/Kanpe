@@ -103,9 +103,9 @@ Tag shortcuts in a pack with `"level": "core" | "extended" | "complete"`. You ca
 
 ### Pages: shortcuts for the part of the site you're on
 
-A site can be split into pages by URL path, and a group can be limited to some of them. On GitHub, a repo's code view shows **Code** shortcuts, an issue shows **Issues & PRs** shortcuts, a pull request also shows **PR changes**, and so on. Groups not limited to a page (like GitHub's **Site-wide**) show everywhere on the site. Page-specific groups come first in the panel, and the page name shows next to the host: `github.com › Issue`.
+A site can be split into pages by URL path, and a group can be limited to some of them. On GitHub, a repo's code view shows **Code** shortcuts, an issue shows **Issues & PRs** shortcuts, a pull request also shows **PR changes**, and so on. Groups not limited to a page (like GitHub's **Site-wide**) show everywhere on the site. Page-specific groups come first in the panel, and the page name shows next to the host: `github.com › Issue`. With only one site matching, group titles drop the site name (the header already shows it).
 
-**Turning it off:** the **This page / All pages** button in the panel header switches a site between "only what fits this page" and "every shortcut on every page". It's remembered per site, and on by default. You can also toggle it from the menu-bar icon → **Match Shortcuts to Page**.
+**Turning it off:** the target button (◎) next to the level picker in the panel header switches a site between "only what fits this page" and "every shortcut on every page". It's remembered per site, and on by default. You can also toggle it from the menu-bar icon → **Match Shortcuts to Page**.
 
 ```json
 {

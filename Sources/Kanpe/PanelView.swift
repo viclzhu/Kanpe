@@ -218,12 +218,10 @@ private struct PageToggle: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: filtering ? "scope" : "square.stack")
-                Text(filtering ? "This page" : "All pages")
-            }
+            Image(systemName: filtering ? "scope" : "square.stack")
             .font(.caption.weight(.medium))
-            .padding(.horizontal, 9).padding(.vertical, 4)
+            .frame(height: 15)
+            .padding(.horizontal, 8).padding(.vertical, 4)
             .background(filtering ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.08),
                         in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .foregroundStyle(filtering ? .primary : .secondary)

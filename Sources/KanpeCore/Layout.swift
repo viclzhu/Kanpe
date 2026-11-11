@@ -32,6 +32,16 @@ public enum ColumnLayout {
             self.maxHeight = maxHeight
         }
 
+        /// How much columns may widen to fill a header that's wider than them.
+        public static let maxStretch = 1.45
+
+        /// Column width for `n` columns: widened (up to `maxStretch`) to fill the header.
+        public func columnWidth(for n: Int) -> Double {
+            let n = Double(max(n, 1))
+            let fill = (headerWidth - Double(n - 1) * columnSpacing) / n
+            return min(max(columnWidth, fill), columnWidth * Self.maxStretch)
+        }
+
         var maxColumns: Int {
             max(1, Int((maxWidth - chromeWidth + columnSpacing) / (columnWidth + columnSpacing)))
         }
@@ -53,8 +63,12 @@ public enum ColumnLayout {
         column.reduce(0) { $0 + overhead($1) + $1.shortcuts.count }
     }
 
-    /// Picks the column count whose overall shape best matches `targetAspect` (width / height),
-    /// while fitting within the metrics' maximum size when possible.
+    /// How strongly empty space counts against a layout, relative to being the wrong shape.
+    static let wasteWeight = 4.0
+
+    /// Picks the column count that best balances two things: the panel's shape being close to
+    /// `targetAspect` (width / height), and little empty space (ragged column ends, or a strip
+    /// under a header that's wider than the columns). Layouts that don't fit `maxHeight` lose.
     public static func best(_ groups: [ShortcutGroup], metrics m: Metrics, targetAspect: Double) -> [[ShortcutGroup]] {
         guard !groups.isEmpty else { return [] }
         var best: (score: Double, columns: [[ShortcutGroup]])?
@@ -62,18 +76,31 @@ public enum ColumnLayout {
         for n in 1...m.maxColumns {
             let columns = flow(groups, columns: n)
             tallest = columns
-            let rows = Double(columns.map(height).max() ?? 0)
-            let contentWidth = Double(columns.count) * m.columnWidth + Double(columns.count - 1) * m.columnSpacing
-            let width = max(contentWidth, m.headerWidth) + m.chromeWidth
-            let height = rows * m.rowHeight + m.chromeHeight
-            if height > m.maxHeight { continue } // too tall: needs more columns
-            // Penalise empty space under a header that's wider than the columns.
-            let unused = max(0, m.headerWidth - contentWidth) / width
-            let score = abs(log((width / height) / targetAspect)) + unused
-            if best == nil || score < best!.score { best = (score, columns) }
+            let score = Self.score(columns, metrics: m, targetAspect: targetAspect)
+            if score.fits, best == nil || score.value < best!.score { best = (score.value, columns) }
             if columns.count < n { break } // can't spread any further
         }
         return best?.columns ?? tallest
+    }
+
+    static func score(_ columns: [[ShortcutGroup]], metrics m: Metrics, targetAspect: Double) -> (value: Double, fits: Bool) {
+        let heights = columns.map(height)
+        let rows = Double(heights.max() ?? 0)
+        let n = columns.count
+        let colWidth = m.columnWidth(for: n)
+        let contentWidth = Double(n) * colWidth + Double(n - 1) * m.columnSpacing
+        let boxWidth = max(contentWidth, m.headerWidth)
+        let width = boxWidth + m.chromeWidth
+        let height = rows * m.rowHeight + m.chromeHeight
+        // Share of the content area (below the header) that's blank.
+        let used = Double(heights.reduce(0, +)) * m.rowHeight * colWidth
+        let waste = rows > 0 ? 1 - used / (rows * m.rowHeight * boxWidth) : 0
+        // Shape matters for big cheat sheets, which must fit the screen. A small panel (a few
+        // page-specific groups) fits in any shape, so there filling it without gaps matters more.
+        let screenShare = (width * height) / (m.maxWidth * m.maxHeight)
+        let shapeWeight = min(1, 3 * screenShare)
+        let value = shapeWeight * abs(log((width / height) / targetAspect)) + wasteWeight * waste
+        return (value, height <= m.maxHeight && width <= m.maxWidth)
     }
 
     /// Flows groups into at most `n` columns of roughly equal height.

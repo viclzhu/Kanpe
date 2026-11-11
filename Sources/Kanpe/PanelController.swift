@@ -75,7 +75,7 @@ final class PanelController {
     }
 
     /// Chooses columns so the panel's shape is close to the screen's, within `maxSize`, and
-    /// widens them (up to 30%) when the header is wider, so there's no empty strip on the right.
+    /// widens them (up to `Metrics.maxStretch`) when the header is wider, so there's no empty strip on the right.
     static func layout(for content: PanelContent, icon: NSImage?, maxSize: CGSize) -> (columns: [[ShortcutGroup]], width: CGFloat) {
         let spacing: CGFloat = 18
         let header = NSHostingView(rootView: PanelHeader(content: content, icon: icon)).fittingSize
@@ -85,10 +85,7 @@ final class PanelController {
             maxWidth: maxSize.width, maxHeight: maxSize.height)
         let columns = ColumnLayout.best(content.groups, metrics: metrics, targetAspect: maxSize.width / maxSize.height)
         guard !columns.isEmpty else { return (columns, PanelView.columnWidth) }
-        let n = CGFloat(columns.count)
-        let fill = (header.width - spacing * (n - 1)) / n
-        let width = min(max(PanelView.columnWidth, fill), PanelView.columnWidth * 1.3)
-        return (columns, width.rounded(.down))
+        return (columns, CGFloat(metrics.columnWidth(for: columns.count)).rounded(.down))
     }
 
     func hide() {

@@ -132,12 +132,14 @@ public struct SitePack: Codable, Hashable, Sendable {
     }
 
     /// Converts to display groups, keeping only shortcuts at or below `level` and dropping
-    /// groups that end up empty. Group titles are prefixed with the pack name so they stay
-    /// distinguishable from app menu groups.
+    /// groups that end up empty. With `prefixed`, group titles start with the pack name, which
+    /// tells sites apart when more than one matches the tab. A lone group is titled with the
+    /// pack name either way.
     ///
     /// With `pages` (the pages the current URL is on), page-specific groups show only on their
     /// pages, and come first since they're the most relevant. With `nil`, every group shows.
-    public func displayGroups(level: DetailLevel = .complete, pages current: [String]? = nil) -> [ShortcutGroup] {
+    public func displayGroups(level: DetailLevel = .complete, pages current: [String]? = nil,
+                              prefixed: Bool = true) -> [ShortcutGroup] {
         var ordered = groups
         if let current {
             let here = Set(current)
@@ -150,7 +152,7 @@ public struct SitePack: Codable, Hashable, Sendable {
         }
         return visible.map { group, entries in
             ShortcutGroup(
-                title: visible.count == 1 ? name : "\(name) · \(group.title)",
+                title: visible.count == 1 ? name : prefixed ? "\(name) · \(group.title)" : group.title,
                 shortcuts: entries.map { Shortcut(title: $0.title, alternatives: KeyNotation.parseAlternatives($0.keys)) },
                 source: .site
             )

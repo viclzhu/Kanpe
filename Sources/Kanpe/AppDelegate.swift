@@ -138,7 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                      pageFiltering: pack.hasPageSpecificGroups ? filtersPages(forSite: pack.name) : nil)
         }
         let siteGroups = zip(matched, sites).flatMap { pack, site in
-            pack.displayGroups(level: site.level, pages: site.pageFiltering == true ? site.pages : nil)
+            pack.displayGroups(level: site.level, pages: site.pageFiltering == true ? site.pages : nil,
+                               prefixed: matched.count > 1)
         }
         let content = PanelContent(
             appName: shown.app.localizedName ?? bundleID ?? "App",

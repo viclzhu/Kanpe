@@ -31,7 +31,8 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let menus = MenuReader.groups(pid: pid)
     let hideMenus = args.contains("--hide-menus")
     renderContent.groups = zip(matched, content.sites).flatMap { pack, site in
-        pack.displayGroups(level: level, pages: site.pageFiltering == true ? site.pages : nil)
+        pack.displayGroups(level: level, pages: site.pageFiltering == true ? site.pages : nil,
+                           prefixed: matched.count > 1)
     } + (hideMenus ? [] : menus)
     renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count })
     _ = NSApplication.shared

@@ -98,6 +98,19 @@ let screenMetrics = ColumnLayout.Metrics(columnWidth: 270, columnSpacing: 18, ro
 let github = [g("Site-wide", 5, .site), g("Repository", 8, .site), g("Code", 5, .site), g("Issues", 8, .site)]
 let chosen = ColumnLayout.best(github, metrics: screenMetrics, targetAspect: 1700.0 / 950.0)
 check(chosen.count >= 2, true, "small sheet uses several columns (got \(chosen.count))")
+
+// A few page-specific groups: a gap-free row of cards beats a better-shaped panel with a hole.
+let pageMetrics = ColumnLayout.Metrics(columnWidth: 270, columnSpacing: 18, rowHeight: 20.5, chromeHeight: 78,
+                                       chromeWidth: 36, headerWidth: 700, maxWidth: 1420, maxHeight: 830)
+let pageGroups = [g("Repository", 4, .site), g("Issues & PRs", 3, .site), g("Site-wide", 3, .site)]
+check(ColumnLayout.best(pageGroups, metrics: pageMetrics, targetAspect: 1420.0 / 830.0).count, 3,
+      "small page sheet: one group per column")
+// Big sheets still follow the screen's shape rather than becoming one long strip.
+let menuSheet = (0..<12).map { g("Menu \($0)", 8) }
+let menuCols = ColumnLayout.best(menuSheet, metrics: pageMetrics, targetAspect: 1420.0 / 830.0)
+check((2...4).contains(menuCols.count), true, "big sheet uses a screen-shaped column count (got \(menuCols.count))")
+check(pageMetrics.columnWidth(for: 1), 270 * ColumnLayout.Metrics.maxStretch, "one column widens up to maxStretch")
+check(pageMetrics.columnWidth(for: 4), 270, "columns never narrower than the base width")
 // A big sheet must fit the height limit by using more columns.
 let big = (0..<12).map { g("M\($0)", 14) }
 let bigCols = ColumnLayout.best(big, metrics: screenMetrics, targetAspect: 1700.0 / 950.0)
