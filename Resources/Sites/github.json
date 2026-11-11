@@ -150,6 +150,11 @@
           "level": "core"
         },
         {
+          "title": "Expand / collapse sidebar",
+          "keys": "cmd+b",
+          "level": "core"
+        },
+        {
           "title": "Switch branch or tag",
           "keys": "w",
           "level": "extended"
@@ -157,7 +162,7 @@
         {
           "title": "Jump to line",
           "keys": "l",
-          "level": "extended"
+          "level": "core"
         },
         {
           "title": "Permalink to this version",
@@ -167,7 +172,7 @@
         {
           "title": "Open blame",
           "keys": "b",
-          "level": "extended"
+          "level": "core"
         }
       ]
     },
