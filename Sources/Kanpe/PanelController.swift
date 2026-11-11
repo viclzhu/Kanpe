@@ -32,6 +32,7 @@ final class PanelController {
     /// Site name to open in the editor, or nil for the editor's default selection.
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    var onAppLevelChange: (DetailLevel) -> Void = { _ in }
     /// Site name whose "only this page" filter to flip.
     var onTogglePages: (String) -> Void = { _ in }
 
@@ -49,6 +50,7 @@ final class PanelController {
                              onLevelChange: { [weak self] site, level in self?.onLevelChange(site, level) },
                              onEdit: { [weak self] site in self?.onEdit(site) },
                              onToggleAppMenus: { [weak self] in self?.onToggleAppMenus() },
+                             onAppLevelChange: { [weak self] level in self?.onAppLevelChange(level) },
                              onTogglePages: { [weak self] site in self?.onTogglePages(site) },
                              columnWidth: columnWidth)
         let hosting = ClickThroughHostingView(rootView: view)

@@ -8,6 +8,7 @@ struct PanelView: View {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    var onAppLevelChange: (DetailLevel) -> Void = { _ in }
     var onTogglePages: (String) -> Void = { _ in }
     /// Base column width; the panel may widen columns to fill a header that's wider than them.
     static let columnWidth: CGFloat = 270
@@ -16,7 +17,8 @@ struct PanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             PanelHeader(content: content, icon: icon, onLevelChange: onLevelChange,
-                        onEdit: onEdit, onToggleAppMenus: onToggleAppMenus, onTogglePages: onTogglePages)
+                        onEdit: onEdit, onToggleAppMenus: onToggleAppMenus, onAppLevelChange: onAppLevelChange,
+                        onTogglePages: onTogglePages)
             if content.groups.isEmpty {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
@@ -42,6 +44,9 @@ struct PanelView: View {
         if !AX.isTrusted {
             return "Kanpe needs Accessibility access. Open the Kanpe menu-bar icon → Open Accessibility Settings."
         }
+        if let menus = content.appMenus, menus.visible, menus.count == 0 {
+            return "No \(menus.level.title) shortcuts in \(content.appName)'s menus. Pick a higher level to see more."
+        }
         if let menus = content.appMenus, !menus.visible {
             return content.host != nil
                 ? "No shortcuts for this site yet, and \(content.appName)'s menu shortcuts are hidden. Click \u{201C}Menus\u{201D} to show them, or + to add shortcuts for this site."
@@ -59,9 +64,14 @@ struct PanelHeader: View {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    var onAppLevelChange: (DetailLevel) -> Void = { _ in }
     var onTogglePages: (String) -> Void = { _ in }
 
     /// The most specific page the tab is on, e.g. "Code" (pages are listed general → specific).
+    private var showsMenuLevels: Bool {
+        content.appMenus.map { $0.visible && !$0.availableLevels.isEmpty } ?? false
+    }
+
     private var pageName: String? { content.sites.lazy.compactMap(\.pages.last).first }
 
     var body: some View {
@@ -83,7 +93,9 @@ struct PanelHeader: View {
             Spacer(minLength: 16)
             ForEach(content.sites.filter { !$0.availableLevels.isEmpty || $0.pageFiltering != nil }, id: \.name) { site in
                 HStack(spacing: 6) {
-                    if content.sites.count > 1 {
+                    // Name the site when there's more than one, or when the menus' level picker
+                    // is also showing, so the two pickers can be told apart.
+                    if content.sites.count > 1 || showsMenuLevels {
                         Text(site.name).font(.caption).foregroundStyle(.secondary)
                     }
                     if let filtering = site.pageFiltering {
@@ -95,7 +107,12 @@ struct PanelHeader: View {
                 }
             }
             if let menus = content.appMenus {
-                AppMenusToggle(appName: content.appName, menus: menus, action: onToggleAppMenus)
+                HStack(spacing: 6) {
+                    AppMenusToggle(appName: content.appName, menus: menus, action: onToggleAppMenus)
+                    if menus.visible, !menus.availableLevels.isEmpty {
+                        LevelPicker(levels: menus.availableLevels, selected: menus.level, onSelect: onAppLevelChange)
+                    }
+                }
             }
             if content.host != nil {
                 Button { onEdit(content.sites.first?.name) } label: {

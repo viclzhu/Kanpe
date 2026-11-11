@@ -14,12 +14,13 @@ Kanpe is a SwiftPM macOS app (macOS 13+, Swift tools 5.10). It is built with the
 | `Sources/KanpeCore/` | Pure logic with no AppKit. Put new logic here so the self-tests can cover it. |
 | `SitePacks.swift` | `DetailLevel`, `SitePack` (with `Page`, `Group` and `Entry`), `SiteMatcher` (host and path-prefix matching), `PathPattern` (`*`, `**`, globs, `{a,b}`, `!`), and `SitePackStore` (install, load, save, revert, and the `.installed.json` manifest). |
 | `Editing.swift` | `EditableSite`, the editor's copy of a pack. Groups, shortcuts and pages carry UUIDs, and groups link to pages by ID, so renaming a page keeps its links. Also `KeyRecording`. |
+| `MenuLevels.swift` | Heuristic Core/Extended/Complete for live menu items (no metadata exists): `coreChords` + `coreTitles` (last path component, lowercased, no `…`) → Core; ⌘ with ≤1 extra modifier and ≤1 submenu deep → Extended; else Complete. Apps default to Extended (`MenuLevels.default`). `--dump` prints each menu item's level (`cor`/`ext`/`com`); check Chrome and Finder counts after changing the lists. |
 | `Models.swift` | `Shortcut`, `ShortcutGroup` (with `part`, used by column splitting), `PanelContent` and `SiteInfo`. `SiteInfo` holds the level, the current pages and `pageFiltering`. |
 | `KeyNotation.swift` | Pack `keys` notation to glyphs. Spaces separate a sequence, `+` joins a chord and ` or ` separates alternatives. Also handles menu modifier masks; bit 8 means no ⌘, which gives an "fn " prefix for bare letters. |
 | `Layout.swift` | Newspaper columns. `ColumnLayout.best` scores each column count by shape (closeness to the screen's aspect, weighted by how much of the screen the panel covers) plus `wasteWeight` × blank area (ragged column ends, strip under a wide header). Columns widen up to `Metrics.maxStretch` to fill the header, and the same `columnWidth(for:)` is used for scoring and drawing. Groups of 10 rows or more (`minSplitRows`) may split; each piece has at least 3 rows (`minChunk`). |
 | `Trigger.swift` | `TriggerStateMachine`, a pure state machine for the hold and double-tap-hold gestures. |
 | `Sources/Kanpe/` | The AppKit/SwiftUI app. |
-| `AppDelegate.swift` | Main hub (`@MainActor`). Prefetches on gesture start, `render()` builds `PanelContent`, and builds the status menu. Per-site and per-app settings live in UserDefaults dictionaries: `siteLevels`, `sitePageFiltering`, `appMenusVisible`. |
+| `AppDelegate.swift` | Main hub (`@MainActor`). Prefetches on gesture start, `render()` builds `PanelContent`, and builds the status menu. Per-site and per-app settings live in UserDefaults dictionaries: `siteLevels`, `sitePageFiltering`, `appMenusVisible`, `appLevels` (keyed by bundle id). |
 | `ActivationMonitor.swift` | Global and local NSEvent monitors that feed `TriggerStateMachine`. |
 | `MenuReader.swift`, `BrowserURLReader.swift`, `AX.swift` | Accessibility reading. Chromium browsers need `AXManualAccessibility = true` before their `AXWebArea`/`AXURL` appear; AppleScript is the fallback. |
 | `PanelController.swift`, `PanelView.swift` | Non-activating floating panel. `PanelHeader` is its own view because the layout measures its width. |
@@ -55,7 +56,7 @@ pkill -x Kanpe; scripts/bundle.sh && open build/Kanpe.app
 ## Verify changes in the real app
 
 - **Logs:** `/usr/bin/log stream --predicate 'subsystem == "dev.victorzhu.Kanpe"' --level debug`. The categories are `trigger` and `app`. Use the full path, because in zsh `log` is a builtin. For recent history: `/usr/bin/log show --last 2m --predicate '…' --style compact`.
-- **Panel render:** `build/Kanpe.app/Contents/MacOS/Kanpe --render com.google.Chrome /tmp/out.png <url> [--level core|extended|complete] [--hide-menus] [--all-pages]` renders the panel to a PNG. The URL overrides the real tab. Read the PNG to check it.
+- **Panel render:** `build/Kanpe.app/Contents/MacOS/Kanpe --render com.google.Chrome /tmp/out.png <url> [--level core|extended|complete] [--app-level core|extended|complete] [--hide-menus] [--all-pages]` renders the panel to a PNG. The URL overrides the real tab. Read the PNG to check it.
 - **Layout changes:** render a fixed set before and after, and compare sizes and gaps. Cover small cases (an issue page or the home page at Core, with `--hide-menus`), a PR page at Extended and Complete, `--all-pages --level complete`, a page with menus shown, and a non-browser app such as `com.apple.finder`. Big cases should keep their size unless that's the point of the change.
 - **Text dump:** `--dump <bundle-id>` prints what the panel would show.
 - **Editor render:** `--render-editor /tmp/editor.png [SiteName]` renders the editor. It needs Screen Recording for the terminal, uses `CGWindowListCreateImage`, and only shows the top of the window, with no scrolling.

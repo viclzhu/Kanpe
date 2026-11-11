@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.setLevel(level, forSite: site)
         }
         panel.onToggleAppMenus = { [weak self] in self?.toggleAppMenus() }
+        panel.onAppLevelChange = { [weak self] level in self?.setAppLevel(level) }
         panel.onTogglePages = { [weak self] site in
             guard let self else { return }
             self.setFiltersPages(!self.filtersPages(forSite: site), forSite: site)
@@ -130,8 +131,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let shown else { return }
         let bundleID = shown.app.bundleIdentifier
         let matched = shown.url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
-        let menuCount = shown.menus.reduce(0) { $0 + $1.shortcuts.count }
         let menusVisible = showsAppMenus(for: bundleID)
+        let appLevel = level(forApp: bundleID)
+        let menus = MenuLevels.filter(shown.menus, level: appLevel)
+        let menuCount = menus.reduce(0) { $0 + $1.shortcuts.count }
         let sites = matched.map { pack in
             SiteInfo(name: pack.name, level: level(forSite: pack.name), availableLevels: pack.availableLevels,
                      pages: shown.url.map(pack.pages(for:)) ?? [],
@@ -146,8 +149,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bundleID: bundleID,
             host: shown.url.flatMap(SiteMatcher.normalizedHost),
             sites: sites,
-            groups: siteGroups + (menusVisible ? shown.menus : []),
-            appMenus: menuCount == 0 ? nil : .init(visible: menusVisible, count: menuCount)
+            groups: siteGroups + (menusVisible ? menus : []),
+            appMenus: shown.menus.isEmpty ? nil : .init(visible: menusVisible, count: menuCount, level: appLevel,
+                                                        availableLevels: MenuLevels.availableLevels(shown.menus))
         )
         panel.show(content, icon: shown.app.icon, animated: !panel.isVisible)
     }
@@ -172,7 +176,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         render()
     }
 
-    // MARK: - Detail levels (remembered per site)
+    // MARK: - Detail levels (remembered per site, and per app for its menu shortcuts)
+
+    private func level(forApp bundleID: String?) -> DetailLevel {
+        guard let bundleID else { return MenuLevels.default }
+        let stored = (defaults.dictionary(forKey: "appLevels") as? [String: String])?[bundleID]
+        return stored.flatMap(DetailLevel.init(rawValue:)) ?? MenuLevels.default
+    }
+
+    private func setAppLevel(_ level: DetailLevel) {
+        guard let bundleID = shown?.app.bundleIdentifier else { return }
+        var levels = (defaults.dictionary(forKey: "appLevels") as? [String: String]) ?? [:]
+        levels[bundleID] = level.rawValue
+        defaults.set(levels, forKey: "appLevels")
+        render()
+    }
 
     private func level(forSite name: String) -> DetailLevel {
         let stored = (defaults.dictionary(forKey: "siteLevels") as? [String: String])?[name]

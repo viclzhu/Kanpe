@@ -371,6 +371,30 @@ if let github = loaded.packs.first(where: { $0.name == "GitHub" }) {
     check(on("/"), [], "home")
 }
 
+// MARK: App menu levels
+do {
+    func lvl(_ title: String, _ chord: String) -> DetailLevel { MenuLevels.level(of: Shortcut(title: title, chord: chord)) }
+    check(lvl("Copy", "⌘C"), .core, "universal chord")
+    check(lvl("Kopieren", "⌘C"), .core, "universal chord in another language")
+    check(lvl("Reopen Closed Tab", "⇧⌘T"), .core, "core title")
+    check(lvl("Find › Find…", "⌘F"), .core, "core title in a submenu, ellipsis ignored")
+    check(lvl("Select Next Tab", "⌃⇥"), .core, "core title without ⌘")
+    check(lvl("Bookmark All Tabs…", "⇧⌘D"), .extended, "two modifiers")
+    check(lvl("Developer › Developer Tools", "⌥⌘I"), .extended, "one submenu deep")
+    check(lvl("Close All", "⌥⇧⌘W"), .complete, "three modifiers")
+    check(lvl("Center", "⌃C"), .complete, "no ⌘")
+    check(lvl("Emoji & Symbols", "fn E"), .complete, "fn key")
+    check(lvl("A › B › C", "⌘K"), .complete, "two submenus deep")
+    let menus = [ShortcutGroup(title: "File", shortcuts: [Shortcut(title: "New Tab", chord: "⌘T"),
+                                                          Shortcut(title: "Close All", chord: "⌥⇧⌘W")], source: .app),
+                 ShortcutGroup(title: "Window", shortcuts: [Shortcut(title: "Fill", chord: "⌃F")], source: .app)]
+    check(MenuLevels.filter(menus, level: .core).map(\.title), ["File"], "empty groups dropped")
+    check(MenuLevels.filter(menus, level: .complete).map { $0.shortcuts.count }, [2, 1], "complete keeps all")
+    check(MenuLevels.count(menus, at: .extended), 1, "count at level")
+    check(MenuLevels.availableLevels(menus), DetailLevel.allCases, "levels offered")
+    check(MenuLevels.availableLevels([menus[1]]), [], "one level: nothing to choose")
+}
+
 if failures == 0 {
     print("All checks passed (\(loaded.packs.count) bundled site packs).")
 } else {

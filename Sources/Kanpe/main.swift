@@ -5,7 +5,7 @@ import KanpeCore
 // Debug modes (need the launching terminal to have Accessibility access):
 //   Kanpe --dump <bundle-id>                 print what the panel would show for a running app
 //   Kanpe --render <bundle-id> <out.png> [url]   render the panel to a PNG (optional URL overrides the tab)
-//        [--level core|extended|complete] [--hide-menus] [--all-pages]
+//        [--level core|extended|complete] [--app-level core|extended|complete] [--hide-menus] [--all-pages]
 let args = CommandLine.arguments
 if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let bundleID = args[flag + 1]
@@ -28,13 +28,16 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
                                },
                                groups: [], appMenus: nil)
     var renderContent = content
-    let menus = MenuReader.groups(pid: pid)
+    let allMenus = MenuReader.groups(pid: pid)
+    let appLevel = args.firstIndex(of: "--app-level").flatMap { args.count > $0 + 1 ? DetailLevel(rawValue: args[$0 + 1]) : nil } ?? MenuLevels.default
+    let menus = MenuLevels.filter(allMenus, level: appLevel)
     let hideMenus = args.contains("--hide-menus")
     renderContent.groups = zip(matched, content.sites).flatMap { pack, site in
         pack.displayGroups(level: level, pages: site.pageFiltering == true ? site.pages : nil,
                            prefixed: matched.count > 1)
     } + (hideMenus ? [] : menus)
-    renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count })
+    renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count },
+                                   level: appLevel, availableLevels: MenuLevels.availableLevels(allMenus))
     _ = NSApplication.shared
     let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
     let (columns, columnWidth) = PanelController.layout(for: renderContent, icon: target.icon,
@@ -103,7 +106,8 @@ if let flag = args.firstIndex(of: "--dump"), args.count > flag + 1 {
         print("\n[\(group.source.rawValue)] \(group.title)")
         for s in group.shortcuts {
             let keys = s.alternatives.map { $0.joined(separator: " then ") }.joined(separator: " or ")
-            print("  \(keys.padding(toLength: 14, withPad: " ", startingAt: 0)) \(s.title)")
+            let level = group.source == .app ? MenuLevels.level(of: s).title.prefix(3).lowercased() + " " : ""
+            print("  \(level)\(keys.padding(toLength: 14, withPad: " ", startingAt: 0)) \(s.title)")
         }
     }
     exit(0)

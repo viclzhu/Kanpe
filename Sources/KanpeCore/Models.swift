@@ -50,10 +50,17 @@ public struct PanelContent: Sendable {
 
     public struct AppMenus: Sendable {
         public var visible: Bool
+        /// Shortcuts shown at `level`.
         public var count: Int
-        public init(visible: Bool, count: Int) {
+        public var level: DetailLevel
+        /// Empty if every menu shortcut is at the same level (nothing to choose between).
+        public var availableLevels: [DetailLevel]
+        public init(visible: Bool, count: Int, level: DetailLevel = MenuLevels.default,
+                    availableLevels: [DetailLevel] = []) {
             self.visible = visible
             self.count = count
+            self.level = level
+            self.availableLevels = availableLevels
         }
     }
 

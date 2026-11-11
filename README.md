@@ -78,6 +78,7 @@ Debug without the UI (run from a terminal that has Accessibility access):
 ```sh
 .build/debug/Kanpe --dump com.google.Chrome                 # print what the panel would show
 .build/debug/Kanpe --render com.google.Chrome out.png https://github.com --level extended   # render to a PNG
+                                                             #   --app-level sets the menus' level
                                                              #   also: --hide-menus, --all-pages
 .build/debug/Kanpe --render-editor editor.png GitHub        # editor screenshot (needs Screen Recording)
 ```
@@ -136,6 +137,13 @@ Tag shortcuts in a pack with `"level": "core" | "extended" | "complete"`. You ca
     { "title": "Mark as done", "keys": "e" },
     { "title": "Go to notifications", "keys": "g n", "level": "extended" } ] }
 ```
+
+**App menu shortcuts have levels too.** A second **Core | Extended | Complete** control sits next to **Menus**, and is remembered **per app**. Menus don't say which items matter, so Kanpe sorts them like this:
+- **Core:** universal chords (⌘C, ⌘V, ⌘Z, ⇧⌘Z, ⌘X, ⌘A, ⌘F, ⌘S, ⌘N, ⌘W, ⌘Q, ⌘,) in any app or language, plus well-known commands such as New Tab, Reopen Closed Tab, Open Location, Back/Forward, Reload and Select Next/Previous Tab.
+- **Extended:** other ⌘ shortcuts with at most one extra modifier (⇧⌘ or ⌥⌘) and at most one submenu deep, e.g. Developer › Developer Tools.
+- **Complete:** everything else: three-modifier chords, shortcuts without ⌘ (such as ⌃ window tiling and fn keys), and items in deeper submenus.
+
+Apps start at **Extended**. For Chrome that's 22 shortcuts at Core, 59 at Extended and all 80 at Complete. When a site's picker and the menus' picker are both showing, the site's picker is labelled with the site name.
 
 ### Pages: shortcuts for the part of the site you're on
 
