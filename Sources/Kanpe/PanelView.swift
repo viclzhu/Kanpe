@@ -8,6 +8,7 @@ struct PanelView: View {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    var onTogglePages: (String) -> Void = { _ in }
     /// Base column width; the panel may widen columns to fill a header that's wider than them.
     static let columnWidth: CGFloat = 270
     var columnWidth: CGFloat = PanelView.columnWidth
@@ -15,7 +16,7 @@ struct PanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             PanelHeader(content: content, icon: icon, onLevelChange: onLevelChange,
-                        onEdit: onEdit, onToggleAppMenus: onToggleAppMenus)
+                        onEdit: onEdit, onToggleAppMenus: onToggleAppMenus, onTogglePages: onTogglePages)
             if content.groups.isEmpty {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
@@ -58,6 +59,10 @@ struct PanelHeader: View {
     var onLevelChange: (String, DetailLevel) -> Void = { _, _ in }
     var onEdit: (String?) -> Void = { _ in }
     var onToggleAppMenus: () -> Void = {}
+    var onTogglePages: (String) -> Void = { _ in }
+
+    /// The most specific page the tab is on, e.g. "Code" (pages are listed general → specific).
+    private var pageName: String? { content.sites.lazy.compactMap(\.pages.last).first }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -66,7 +71,7 @@ struct PanelHeader: View {
             }
             Text(content.appName).font(.title3.weight(.semibold))
             if let host = content.host {
-                Label(host, systemImage: "globe")
+                Label(pageName.map { "\(host) \u{203A} \($0)" } ?? host, systemImage: "globe")
                     .font(.callout)
                     .lineLimit(1)
                     .fixedSize()
@@ -76,12 +81,17 @@ struct PanelHeader: View {
                     .foregroundStyle(content.sites.isEmpty ? .secondary : .primary)
             }
             Spacer(minLength: 16)
-            ForEach(content.sites.filter { !$0.availableLevels.isEmpty }, id: \.name) { site in
+            ForEach(content.sites.filter { !$0.availableLevels.isEmpty || $0.pageFiltering != nil }, id: \.name) { site in
                 HStack(spacing: 6) {
                     if content.sites.count > 1 {
                         Text(site.name).font(.caption).foregroundStyle(.secondary)
                     }
-                    LevelPicker(levels: site.availableLevels, selected: site.level) { onLevelChange(site.name, $0) }
+                    if let filtering = site.pageFiltering {
+                        PageToggle(site: site.name, filtering: filtering) { onTogglePages(site.name) }
+                    }
+                    if !site.availableLevels.isEmpty {
+                        LevelPicker(levels: site.availableLevels, selected: site.level) { onLevelChange(site.name, $0) }
+                    }
                 }
             }
             if let menus = content.appMenus {
@@ -200,6 +210,32 @@ extension DetailLevel {
 }
 
 /// Shows/hides the frontmost app's own menu shortcuts (e.g. Chrome's File/Edit/View…).
+/// Switches a site between "only this page's shortcuts" and "every page's shortcuts".
+private struct PageToggle: View {
+    let site: String
+    let filtering: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: filtering ? "scope" : "square.stack")
+                Text(filtering ? "This page" : "All pages")
+            }
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(filtering ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.08),
+                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .foregroundStyle(filtering ? .primary : .secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(filtering
+              ? "Showing \(site) shortcuts for this page. Click to show shortcuts for every page."
+              : "Showing every \(site) shortcut. Click to show only this page's.")
+    }
+}
+
 private struct AppMenusToggle: View {
     let appName: String
     let menus: PanelContent.AppMenus

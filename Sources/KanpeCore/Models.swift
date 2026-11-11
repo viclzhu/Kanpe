@@ -73,10 +73,18 @@ public struct SiteInfo: Hashable, Sendable {
     public var level: DetailLevel
     /// Empty if the pack has no levels to choose between.
     public var availableLevels: [DetailLevel]
+    /// Pages of the site the current URL is on (e.g. ["Repository", "Code"]).
+    public var pages: [String]
+    /// Whether only the current page's shortcuts are shown. `nil` when the pack has no
+    /// page-specific groups (nothing to toggle).
+    public var pageFiltering: Bool?
 
-    public init(name: String, level: DetailLevel, availableLevels: [DetailLevel]) {
+    public init(name: String, level: DetailLevel, availableLevels: [DetailLevel],
+                pages: [String] = [], pageFiltering: Bool? = nil) {
         self.name = name
         self.level = level
         self.availableLevels = availableLevels
+        self.pages = pages
+        self.pageFiltering = pageFiltering
     }
 }

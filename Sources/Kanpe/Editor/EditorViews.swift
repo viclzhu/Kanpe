@@ -205,7 +205,7 @@ private struct SiteEditor<Actions: View>: View {
                     .buttonStyle(.borderless)
                     .padding(.vertical, 2)
                 } header: {
-                    GroupHeader(group: $group, siteGroups: $site.groups)
+                    GroupHeader(group: $group, siteGroups: $site.groups, pages: site.pages)
                 }
             }
 
@@ -238,6 +238,8 @@ private struct SiteEditor<Actions: View>: View {
             }
 
             DomainsEditor(site: $site)
+
+            PagesEditor(site: $site)
 
             LevelSummary(pack: site.pack)
 
@@ -296,6 +298,194 @@ private struct DomainsEditor: View {
     }
 }
 
+/// Named parts of the site, each matched by URL path patterns. Groups can be limited to pages.
+private struct PagesEditor: View {
+    @Binding var site: EditableSite
+    @State private var testURL = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Pages").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    site.pages.append(EditableSite.Page(name: "New Page"))
+                } label: {
+                    Label("Add Page", systemImage: "plus").font(.caption)
+                }
+                .buttonStyle(.borderless)
+            }
+            if site.pages.isEmpty {
+                Text("Optional. Name parts of the site by URL path (like a repo's Issues tab), then limit groups to them so the panel shows what fits the page you're on.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach($site.pages) { $page in
+                        PageRow(page: $page, groupCount: site.groups.filter { $0.pageIDs.contains(page.id) }.count,
+                                onDelete: { site.deletePage(page.id) })
+                        if page.id != site.pages.last?.id { Divider() }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                Text(verbatim: "* is one part of the path, ** any number of parts, {a,b} either, ! excludes. Example: /*/*/issues/** is a repo's issue list and every issue.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Image(systemName: "link").font(.caption).foregroundStyle(.secondary)
+                    TextField("Try a URL to see which page it's on", text: $testURL)
+                        .textFieldStyle(.plain)
+                        .font(.callout)
+                    if let result = testResult {
+                        Text(result.text)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(result.matched ? Color.accentColor : .secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+
+    private var testResult: (text: String, matched: Bool)? {
+        var raw = testURL.trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty else { return nil }
+        if !raw.contains("://") { raw = "https://" + raw }
+        guard let url = URL(string: raw), url.host != nil else { return ("Not a URL", false) }
+        if !site.match.isEmpty, !site.match.contains(where: { SiteMatcher.matches(pattern: $0, url: url) }) {
+            return ("Not on this site's domains", false)
+        }
+        let pages = site.pages(for: url)
+        return pages.isEmpty ? ("No page: only groups for all pages", false) : (pages.joined(separator: " \u{203A} "), true)
+    }
+}
+
+private struct PageRow: View {
+    @Binding var page: EditableSite.Page
+    let groupCount: Int
+    let onDelete: () -> Void
+    @State private var draft = ""
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                TextField("Page name", text: $page.name)
+                    .textFieldStyle(.plain)
+                    .font(.callout.weight(.medium))
+                Text(groupCount == 0 ? "No groups yet" : "\(groupCount) group\(groupCount == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(width: 130, alignment: .leading)
+
+            FlowLayout(spacing: 5) {
+                ForEach(page.paths, id: \.self) { path in
+                    let excluded = path.hasPrefix("!")
+                    HStack(spacing: 3) {
+                        if excluded { Text("not").font(.caption2.weight(.semibold)).foregroundStyle(.orange) }
+                        Text(excluded ? String(path.dropFirst()) : path)
+                            .font(.system(.caption, design: .monospaced))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: 260, alignment: .leading)
+                            .fixedSize(horizontal: path.count < 34, vertical: false)
+                            .help(path)
+                        Button {
+                            page.paths.removeAll { $0 == path }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove \(path)")
+                    }
+                    .padding(.leading, 7).padding(.trailing, 4).padding(.vertical, 2)
+                    .background((excluded ? Color.orange : Color.accentColor).opacity(0.12), in: Capsule())
+                }
+                TextField(page.paths.isEmpty ? "Add a path, e.g. /*/*/issues" : "Add path", text: $draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(width: page.paths.isEmpty ? 190 : 110)
+                    .padding(.vertical, 2)
+                    .onSubmit(commit)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: onDelete) {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(hovering ? Color.red : Color.secondary.opacity(0.35))
+            }
+            .buttonStyle(.borderless)
+            .help(groupCount == 0 ? "Delete page" : "Delete page (its groups will show on every page)")
+        }
+        .padding(.vertical, 7)
+        .onHover { hovering = $0 }
+        .onDisappear(perform: commit)
+    }
+
+    private func commit() {
+        guard !draft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        page.addPaths(draft)
+        draft = ""
+    }
+}
+
+/// Chooses which pages a group shows on. No pages chosen: every page.
+private struct GroupPagesPicker: View {
+    @Binding var group: EditableSite.Group
+    let pages: [EditableSite.Page]
+
+    private var label: String {
+        let names = pages.filter { group.pageIDs.contains($0.id) }.map(\.name)
+        return names.isEmpty ? "All pages" : names.joined(separator: ", ")
+    }
+
+    var body: some View {
+        Menu {
+            Button {
+                group.pageIDs = []
+            } label: {
+                if group.pageIDs.isEmpty { Label("All pages", systemImage: "checkmark") } else { Text("All pages") }
+            }
+            Divider()
+            ForEach(pages) { page in
+                Button {
+                    if group.pageIDs.contains(page.id) {
+                        group.pageIDs.removeAll { $0 == page.id }
+                    } else {
+                        group.pageIDs.append(page.id)
+                    }
+                } label: {
+                    let name = page.name.isEmpty ? "Untitled page" : page.name
+                    if group.pageIDs.contains(page.id) { Label(name, systemImage: "checkmark") } else { Text(name) }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: group.pageIDs.isEmpty ? "square.stack" : "scope")
+                Text(label).lineLimit(1)
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(group.pageIDs.isEmpty ? Color.secondary : Color.accentColor)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background((group.pageIDs.isEmpty ? Color.secondary : Color.accentColor).opacity(0.12), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(group.pageIDs.isEmpty ? "Shows on every page of the site" : "Shows only on these pages")
+    }
+}
+
 private struct LevelSummary: View {
     let pack: SitePack
 
@@ -318,6 +508,7 @@ private struct LevelSummary: View {
 private struct GroupHeader: View {
     @Binding var group: EditableSite.Group
     @Binding var siteGroups: [EditableSite.Group]
+    let pages: [EditableSite.Page]
 
     private var index: Int? { siteGroups.firstIndex { $0.id == group.id } }
 
@@ -327,6 +518,9 @@ private struct GroupHeader: View {
                 .textFieldStyle(.plain)
                 .font(.headline)
             Spacer()
+            if !pages.isEmpty {
+                GroupPagesPicker(group: $group, pages: pages)
+            }
             Text("\(group.shortcuts.count)")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)

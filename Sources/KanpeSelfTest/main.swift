@@ -290,6 +290,74 @@ for pack in loaded.packs {
     print("  \(pack.name): Core \(counts[0]) · Extended \(counts[1]) · Complete \(counts[2])")
 }
 
+// MARK: Pages (URL path patterns)
+check(PathPattern.matches("/*/*", path: "/apple/swift"), true, "two segments")
+check(PathPattern.matches("/*/*", path: "/apple/swift/"), true, "trailing slash ignored")
+check(PathPattern.matches("/*/*", path: "/apple"), false, "too few segments")
+check(PathPattern.matches("/*/*", path: "/apple/swift/issues"), false, "too many segments")
+check(PathPattern.matches("/*/*/issues/**", path: "/a/b/issues"), true, "** matches zero segments")
+check(PathPattern.matches("/*/*/issues/**", path: "/a/b/issues/12/edit"), true, "** matches several")
+check(PathPattern.matches("/*/*/pull*", path: "/a/b/pulls"), true, "glob in a segment")
+check(PathPattern.matches("/*/*/pull*", path: "/a/b/issues"), false, "glob mismatch")
+check(PathPattern.matches("/a/**/z", path: "/a/b/c/z"), true, "** in the middle")
+check(PathPattern.matches("/Issues", path: "/issues"), true, "case-insensitive")
+check(PathPattern.matches("/", path: "/"), true, "root")
+check(PathPattern.matches("/{issues,pulls}", path: "/pulls"), true, "alternatives")
+check(PathPattern.matches("/{issues,pulls}", path: "/wiki"), false, "alternatives mismatch")
+check(PathPattern.matches("/x{a,b}*", path: "/xbz"), true, "alternatives inside a glob")
+let repoPage = SitePack.Page(name: "Repo", paths: ["/*/*/**", "!/settings/**"])
+check(repoPage.matches(path: "/apple/swift/tree/main"), true, "page matches")
+check(repoPage.matches(path: "/settings/profile"), false, "! excludes")
+
+let pagedJSON = """
+{ "name": "P", "match": ["p.test"],
+  "pages": [ { "name": "Repo", "paths": ["/*/*/**"] }, { "name": "Issues", "paths": ["/*/*/issues/**"] } ],
+  "groups": [
+    { "title": "Everywhere", "shortcuts": [ { "title": "e", "keys": "e" } ] },
+    { "title": "Repo", "pages": ["Repo"], "shortcuts": [ { "title": "r", "keys": "r" } ] },
+    { "title": "Issues", "pages": ["Issues"], "shortcuts": [ { "title": "i", "keys": "i" } ] } ] }
+"""
+let paged = try! JSONDecoder().decode(SitePack.self, from: Data(pagedJSON.utf8))
+let issuesURL = URL(string: "https://p.test/a/b/issues/3")!
+check(paged.pages(for: issuesURL), ["Repo", "Issues"], "pages for URL, in pack order")
+check(paged.pages(for: URL(string: "https://p.test/")!), [], "no page on the home page")
+check(paged.hasPageSpecificGroups, true, "has page groups")
+check(paged.displayGroups(pages: ["Repo", "Issues"]).map(\.title), ["P · Repo", "P · Issues", "P · Everywhere"],
+      "page groups first, then site-wide")
+check(paged.displayGroups(pages: []).map(\.title), ["P"], "home page: only site-wide (single group uses pack name)")
+check(paged.displayGroups(pages: nil).map(\.title), ["P · Everywhere", "P · Repo", "P · Issues"],
+      "filter off: everything in file order")
+check(flat.hasPageSpecificGroups, false, "pack without pages has nothing to toggle")
+
+// Editing keeps page links through renames, and round-trips.
+var pagedEdit = EditableSite(paged, fileURL: nil)
+pagedEdit.pages[1].name = "Issue tracker"
+check(pagedEdit.pack.groups[2].pages, ["Issue tracker"], "rename follows group link")
+pagedEdit.deletePage(pagedEdit.pages[1].id)
+check(pagedEdit.pack.groups[2].pages, nil, "deleting a page makes its groups site-wide")
+check(EditableSite(paged, fileURL: nil).pack, paged, "page round-trip")
+let orphan = try! JSONDecoder().decode(SitePack.self, from: Data(#"{"name":"O","match":["o.test"],"groups":[{"title":"G","pages":["Ghost"],"shortcuts":[{"title":"x","keys":"x"}]}]}"#.utf8))
+let orphanEdit = EditableSite(orphan, fileURL: nil)
+check(orphanEdit.pages.map(\.name), ["Ghost"], "undefined page kept as empty page")
+check(orphanEdit.issues.contains { $0.contains("Ghost") }, true, "empty page flagged")
+var page = EditableSite.Page(name: "X")
+page.addPaths("https://github.com/apple/swift/issues?q=1, /*/*/pulls/ !settings/**")
+check(page.paths, ["/apple/swift/issues", "/*/*/pulls", "!/settings/**"], "paths normalised from URLs")
+
+// Bundled GitHub pages.
+if let github = loaded.packs.first(where: { $0.name == "GitHub" }) {
+    func on(_ path: String) -> [String] { github.pages(for: URL(string: "https://github.com" + path)!) }
+    check(on("/apple/swift"), ["Repository", "Code"], "repo home is Code")
+    check(on("/apple/swift/blob/main/README.md"), ["Repository", "Code"], "file view is Code")
+    check(on("/apple/swift/issues"), ["Repository", "Issues"], "issue list")
+    check(on("/apple/swift/issues/42"), ["Repository", "Issue"], "single issue")
+    check(on("/apple/swift/pulls"), ["Repository", "Pull requests"], "PR list")
+    check(on("/apple/swift/pull/7/files"), ["Repository", "Pull request"], "PR files")
+    check(on("/settings/profile"), [], "settings is not a repo")
+    check(on("/notifications"), ["Notifications"], "notifications")
+    check(on("/"), [], "home")
+}
+
 if failures == 0 {
     print("All checks passed (\(loaded.packs.count) bundled site packs).")
 } else {

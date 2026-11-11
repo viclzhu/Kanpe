@@ -49,6 +49,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.setLevel(level, forSite: site)
         }
         panel.onToggleAppMenus = { [weak self] in self?.toggleAppMenus() }
+        panel.onTogglePages = { [weak self] site in
+            guard let self else { return }
+            self.setFiltersPages(!self.filtersPages(forSite: site), forSite: site)
+        }
         panel.onEdit = { [weak self] site in
             self?.wantsShow = false
             self?.panel.hide()
@@ -128,12 +132,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let matched = shown.url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
         let menuCount = shown.menus.reduce(0) { $0 + $1.shortcuts.count }
         let menusVisible = showsAppMenus(for: bundleID)
+        let sites = matched.map { pack in
+            SiteInfo(name: pack.name, level: level(forSite: pack.name), availableLevels: pack.availableLevels,
+                     pages: shown.url.map(pack.pages(for:)) ?? [],
+                     pageFiltering: pack.hasPageSpecificGroups ? filtersPages(forSite: pack.name) : nil)
+        }
+        let siteGroups = zip(matched, sites).flatMap { pack, site in
+            pack.displayGroups(level: site.level, pages: site.pageFiltering == true ? site.pages : nil)
+        }
         let content = PanelContent(
             appName: shown.app.localizedName ?? bundleID ?? "App",
             bundleID: bundleID,
             host: shown.url.flatMap(SiteMatcher.normalizedHost),
-            sites: matched.map { SiteInfo(name: $0.name, level: level(forSite: $0.name), availableLevels: $0.availableLevels) },
-            groups: matched.flatMap { $0.displayGroups(level: level(forSite: $0.name)) } + (menusVisible ? shown.menus : []),
+            sites: sites,
+            groups: siteGroups + (menusVisible ? shown.menus : []),
             appMenus: menuCount == 0 ? nil : .init(visible: menusVisible, count: menuCount)
         )
         panel.show(content, icon: shown.app.icon, animated: !panel.isVisible)
@@ -170,6 +182,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var levels = (defaults.dictionary(forKey: "siteLevels") as? [String: String]) ?? [:]
         levels[name] = level.rawValue
         defaults.set(levels, forKey: "siteLevels")
+        render()
+        rebuildMenu()
+    }
+
+    // MARK: - Page-specific shortcuts (on by default, remembered per site)
+
+    /// When on, a site's page-specific groups show only on their pages (e.g. GitHub's issue
+    /// shortcuts only on issue pages). When off, every group shows on every page of the site.
+    private func filtersPages(forSite name: String) -> Bool {
+        (defaults.dictionary(forKey: "sitePageFiltering") as? [String: Bool])?[name] ?? true
+    }
+
+    private func setFiltersPages(_ on: Bool, forSite name: String) {
+        var all = (defaults.dictionary(forKey: "sitePageFiltering") as? [String: Bool]) ?? [:]
+        all[name] = on
+        defaults.set(all, forKey: "sitePageFiltering")
         render()
         rebuildMenu()
     }
@@ -292,6 +320,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             detail.submenu = detailMenu
             menu.addItem(detail)
         }
+        let paged = packs.filter(\.hasPageSpecificGroups)
+        if !paged.isEmpty {
+            let pagesItem = NSMenuItem(title: "Match Shortcuts to Page", action: nil, keyEquivalent: "")
+            let pagesMenu = NSMenu()
+            for pack in paged {
+                let i = item(pack.name, #selector(togglePageFiltering(_:)))
+                i.representedObject = pack.name
+                i.state = filtersPages(forSite: pack.name) ? .on : .off
+                i.toolTip = "On: show only the shortcuts for the part of \(pack.name) you're on. Off: show all of \(pack.name)'s shortcuts everywhere."
+                pagesMenu.addItem(i)
+            }
+            pagesItem.submenu = pagesMenu
+            menu.addItem(pagesItem)
+        }
         menu.addItem(item("Edit Shortcuts…", #selector(openEditor), key: ","))
         menu.addItem(item("Open Site Shortcuts Folder", #selector(openSitesFolder)))
         menu.addItem(item("Reload Site Shortcuts", #selector(reloadSites), key: "r"))
@@ -386,6 +428,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleAppleScript() {
         useAppleScriptFallback.toggle()
         rebuildMenu()
+    }
+
+    @objc private func togglePageFiltering(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        setFiltersPages(!filtersPages(forSite: name), forSite: name)
     }
 
     @objc private func setLevelFromMenu(_ sender: NSMenuItem) {

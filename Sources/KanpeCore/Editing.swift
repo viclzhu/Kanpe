@@ -17,15 +17,59 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// A named part of the site, matched by URL path patterns (see `PathPattern`).
+    public struct Page: Identifiable, Hashable, Sendable {
+        public var id = UUID()
+        public var name: String
+        public var paths: [String]
+
+        public init(name: String = "", paths: [String] = []) {
+            self.name = name
+            self.paths = paths
+        }
+
+        /// Adds patterns typed by the user (comma/space separated). Accepts full URLs or
+        /// "github.com/…" by dropping the scheme and host, and adds a missing leading "/".
+        @discardableResult
+        public mutating func addPaths(_ text: String) -> Bool {
+            var added = false
+            for raw in text.split(whereSeparator: { $0 == "," || $0 == " " || $0 == "\n" }) {
+                guard let path = Self.normalize(String(raw)), !paths.contains(path) else { continue }
+                paths.append(path)
+                added = true
+            }
+            return added
+        }
+
+        static func normalize(_ raw: String) -> String? {
+            var p = raw.trimmingCharacters(in: .whitespaces)
+            let negated = p.hasPrefix("!")
+            if negated { p.removeFirst() }
+            for scheme in ["https://", "http://"] where p.lowercased().hasPrefix(scheme) { p.removeFirst(scheme.count) }
+            if let q = p.firstIndex(where: { $0 == "?" || $0 == "#" }) { p = String(p[..<q]) }
+            // "github.com/owner/repo": a first segment with a dot is a host.
+            if !p.hasPrefix("/"), let first = p.split(separator: "/").first, first.contains(".") {
+                p = String(p.dropFirst(first.count))
+            }
+            if !p.hasPrefix("/") { p = "/" + p }
+            while p.count > 1 && p.hasSuffix("/") { p.removeLast() }
+            if p == "/" && negated { return nil }
+            return (negated ? "!" : "") + p
+        }
+    }
+
     public struct Group: Identifiable, Hashable, Sendable {
         public var id = UUID()
         public var title: String
         public var level: DetailLevel?
+        /// Pages this group is limited to. Empty: every page.
+        public var pageIDs: [Page.ID]
         public var shortcuts: [Shortcut]
 
-        public init(title: String, level: DetailLevel? = nil, shortcuts: [Shortcut] = []) {
+        public init(title: String, level: DetailLevel? = nil, pageIDs: [Page.ID] = [], shortcuts: [Shortcut] = []) {
             self.title = title
             self.level = level
+            self.pageIDs = pageIDs
             self.shortcuts = shortcuts
         }
 
@@ -50,26 +94,53 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
     public var fileURL: URL?
     public var name: String
     public var match: [String]
+    public var pages: [Page]
     public var groups: [Group]
 
-    public init(fileURL: URL? = nil, name: String, match: [String], groups: [Group]) {
+    public init(fileURL: URL? = nil, name: String, match: [String], pages: [Page] = [], groups: [Group]) {
         self.fileURL = fileURL
         self.name = name
         self.match = match
+        self.pages = pages
         self.groups = groups
     }
 
     public init(_ pack: SitePack, fileURL: URL?) {
+        var pages = (pack.pages ?? []).map { Page(name: $0.name, paths: $0.paths) }
+        // A group may name a page that isn't defined; keep it as an empty page so the link
+        // isn't silently lost (the editor flags pages without paths).
+        for name in pack.groups.flatMap({ $0.pages ?? [] }) where !pages.contains(where: { $0.name == name }) {
+            pages.append(Page(name: name))
+        }
+        func ids(_ names: [String]?) -> [Page.ID] {
+            (names ?? []).compactMap { name in pages.first { $0.name == name }?.id }
+        }
         self.init(
             fileURL: fileURL,
             name: pack.name,
             match: pack.match,
+            pages: pages,
             groups: pack.groups.map { g in
-                Group(title: g.title, level: g.level,
+                Group(title: g.title, level: g.level, pageIDs: ids(g.pages),
                       shortcuts: g.shortcuts.map { Shortcut(title: $0.title, keys: $0.keys, level: $0.level) })
             }
         )
     }
+
+    /// Names of the pages a group is limited to, in page order.
+    public func pageNames(of group: Group) -> [String] {
+        pages.filter { group.pageIDs.contains($0.id) }.map(\.name)
+    }
+
+    /// Removes a page and unlinks it from groups (which then show on every page, unless they
+    /// still belong to another page).
+    public mutating func deletePage(_ id: Page.ID) {
+        pages.removeAll { $0.id == id }
+        for i in groups.indices { groups[i].pageIDs.removeAll { $0 == id } }
+    }
+
+    /// Names of the pages `url` is on, using the current (unsaved) edits.
+    public func pages(for url: URL) -> [String] { pack.pages(for: url) }
 
     /// A blank site to start from.
     public static func blank(name: String = "New Site") -> EditableSite {
@@ -82,10 +153,12 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
         SitePack(
             name: name.trimmingCharacters(in: .whitespaces),
             match: match,
+            pages: pages.map { SitePack.Page(name: $0.name.trimmingCharacters(in: .whitespaces), paths: $0.paths) },
             groups: groups.map { g in
                 SitePack.Group(
                     title: g.title,
                     level: g.level,
+                    pages: pageNames(of: g).map { $0.trimmingCharacters(in: .whitespaces) },
                     shortcuts: g.shortcuts
                         .filter { !($0.title.trimmingCharacters(in: .whitespaces).isEmpty && $0.keys.trimmingCharacters(in: .whitespaces).isEmpty) }
                         .map { SitePack.Entry(title: $0.title, keys: $0.keys.trimmingCharacters(in: .whitespaces), level: $0.level) }
@@ -123,6 +196,16 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
         let missingKeys = groups.flatMap(\.shortcuts).filter {
             !$0.title.trimmingCharacters(in: .whitespaces).isEmpty && $0.keys.trimmingCharacters(in: .whitespaces).isEmpty
         }.count
+        for page in pages {
+            let name = page.name.trimmingCharacters(in: .whitespaces)
+            if name.isEmpty {
+                out.append("A page has no name.")
+            } else if page.paths.allSatisfy({ $0.hasPrefix("!") }) {
+                out.append("Page \u{201C}\(name)\u{201D} has no paths, so its groups never show.")
+            }
+        }
+        let names = pages.map { $0.name.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+        if Set(names).count < names.count { out.append("Two pages have the same name.") }
         if missingKeys > 0 { out.append("\(missingKeys) shortcut\(missingKeys == 1 ? " has" : "s have") no keys yet.") }
         return out
     }

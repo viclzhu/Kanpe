@@ -42,6 +42,7 @@ Debug without the UI (run from a terminal that has Accessibility access):
 ```sh
 .build/debug/Kanpe --dump com.google.Chrome                 # print what the panel would show
 .build/debug/Kanpe --render com.google.Chrome out.png https://github.com --level extended   # render to a PNG
+                                                             #   also: --hide-menus, --all-pages
 .build/debug/Kanpe --render-editor editor.png GitHub        # editor screenshot (needs Screen Recording)
 ```
 
@@ -56,6 +57,7 @@ Open the editor from the menu-bar icon → **Edit Shortcuts…** (⌘,), or clic
   - Keycaps preview live as you type.
   - Drag rows to reorder them, and click the colored pill to set the level.
 - **Groups:** rename one by clicking its title. Its **•••** menu sets the level for all its shortcuts, moves the group up or down, or deletes it.
+- **Pages:** under the domains, **Add Page** names a part of the site and the URL paths that belong to it (see [Pages](#pages-shortcuts-for-the-part-of-the-site-youre-on)). Type a full URL into the path field and it's turned into a path. **Try a URL** shows which page a URL is on. Once a site has pages, each group header has a page chip: pick the pages the group belongs to, or **All pages**.
 
 Kanpe stays menu-bar only, with no Dock icon, even while the editor is open. To get back to the editor, use the menu-bar icon → **Edit Shortcuts…** again. If you'd rather have a Dock icon and ⌘Tab while editing, turn on **Show Dock Icon While Editing** in the menu-bar menu. ⌘C/⌘V/⌘X/⌘Z/⌘A and ⌘W work in the editor either way.
 
@@ -98,6 +100,38 @@ Tag shortcuts in a pack with `"level": "core" | "extended" | "complete"`. You ca
     { "title": "Mark as done", "keys": "e" },
     { "title": "Go to notifications", "keys": "g n", "level": "extended" } ] }
 ```
+
+### Pages: shortcuts for the part of the site you're on
+
+A site can be split into pages by URL path, and a group can be limited to some of them. On GitHub, a repo's code view shows **Code** shortcuts, an issue shows **Issues & PRs** shortcuts, a pull request also shows **PR changes**, and so on. Groups not limited to a page (like GitHub's **Site-wide**) show everywhere on the site. Page-specific groups come first in the panel, and the page name shows next to the host: `github.com › Issue`.
+
+**Turning it off:** the **This page / All pages** button in the panel header switches a site between "only what fits this page" and "every shortcut on every page". It's remembered per site, and on by default. You can also toggle it from the menu-bar icon → **Match Shortcuts to Page**.
+
+```json
+{
+  "name": "GitHub",
+  "match": ["github.com"],
+  "pages": [
+    { "name": "Repository", "paths": ["/*/*/**", "!/{settings,orgs,notifications}/**"] },
+    { "name": "Issues", "paths": ["/*/*/issues", "/issues"] },
+    { "name": "Issue", "paths": ["/*/*/issues/*"] }
+  ],
+  "groups": [
+    { "title": "Site-wide", "shortcuts": [ { "title": "Focus search", "keys": "/" } ] },
+    { "title": "Repository", "pages": ["Repository"], "shortcuts": [ { "title": "Go to Issues", "keys": "g i" } ] },
+    { "title": "Issues & PRs", "pages": ["Issue"], "shortcuts": [ { "title": "Set labels", "keys": "l" } ] }
+  ]
+}
+```
+
+Path patterns match whole path segments, ignore case, a trailing slash and the query string:
+- `*` is exactly one segment: `/*/*` is `/owner/repo`.
+- `**` is any number of segments, including none: `/*/*/issues/**` is the issue list and every page under it.
+- `*` inside a segment is a wildcard: `/*/*/pull*` matches `pull` and `pulls`.
+- `{a,b}` is either: `/{issues,pulls}`.
+- `!` at the start excludes: a page matches if any of its patterns match and none of its `!` patterns do.
+
+A URL can be on several pages at once (a repo's issue is on both **Repository** and **Issue**). List pages from general to specific; the panel header shows the last one that matches.
 
 **Updates to bundled packs:** when a new version of the app includes an updated pack, it replaces your copy only if you haven't edited it. Packs you've edited are never overwritten.
 

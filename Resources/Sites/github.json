@@ -1,94 +1,347 @@
 {
   "name": "GitHub",
-  "match": ["github.com"],
+  "match": [
+    "github.com"
+  ],
+  "pages": [
+    {
+      "name": "Repository",
+      "paths": [
+        "/*/*/**",
+        "!/{settings,notifications,orgs,organizations,marketplace,explore,topics,trending,collections,sponsors,features,enterprise,pricing,about,login,signup,new,codespaces,search,issues,pulls,dashboard,apps,users,stars,account,security,copilot}/**"
+      ]
+    },
+    {
+      "name": "Code",
+      "paths": [
+        "/*/*",
+        "/*/*/tree/**",
+        "/*/*/blob/**",
+        "/*/*/blame/**",
+        "!/{settings,notifications,orgs,organizations,marketplace,explore,topics,trending,collections,sponsors,features,enterprise,pricing,about,login,signup,new,codespaces,search,issues,pulls,dashboard,apps,users,stars,account,security,copilot}/**"
+      ]
+    },
+    {
+      "name": "Issues",
+      "paths": [
+        "/*/*/issues",
+        "/issues"
+      ]
+    },
+    {
+      "name": "Issue",
+      "paths": [
+        "/*/*/issues/*"
+      ]
+    },
+    {
+      "name": "Pull requests",
+      "paths": [
+        "/*/*/pulls",
+        "/pulls"
+      ]
+    },
+    {
+      "name": "Pull request",
+      "paths": [
+        "/*/*/pull/*/**"
+      ]
+    },
+    {
+      "name": "Notifications",
+      "paths": [
+        "/notifications/**"
+      ]
+    }
+  ],
   "groups": [
     {
       "title": "Site-wide",
       "shortcuts": [
-        { "title": "Focus search", "keys": "/", "level": "core" },
-        { "title": "Open command palette", "keys": "cmd+k", "level": "core" },
-        { "title": "Show all keyboard shortcuts", "keys": "?", "level": "core" },
-        { "title": "Go to notifications", "keys": "g n", "level": "extended" },
-        { "title": "Go to dashboard", "keys": "g d", "level": "extended" }
+        {
+          "title": "Focus search",
+          "keys": "/",
+          "level": "core"
+        },
+        {
+          "title": "Open command palette",
+          "keys": "cmd+k",
+          "level": "core"
+        },
+        {
+          "title": "Show all keyboard shortcuts",
+          "keys": "?",
+          "level": "core"
+        },
+        {
+          "title": "Go to notifications",
+          "keys": "g n",
+          "level": "extended"
+        },
+        {
+          "title": "Go to dashboard",
+          "keys": "g d",
+          "level": "extended"
+        }
       ]
     },
     {
       "title": "Repository",
+      "pages": [
+        "Repository"
+      ],
       "shortcuts": [
-        { "title": "Go to Code", "keys": "g c", "level": "core" },
-        { "title": "Go to Issues", "keys": "g i", "level": "core" },
-        { "title": "Go to Pull requests", "keys": "g p", "level": "core" },
-        { "title": "Open in github.dev editor", "keys": ".", "level": "core" },
-        { "title": "Go to Actions", "keys": "g a", "level": "extended" },
-        { "title": "Go to Projects", "keys": "g b", "level": "extended" },
-        { "title": "Go to Wiki", "keys": "g w", "level": "extended" },
-        { "title": "Go to Discussions", "keys": "g g", "level": "extended" },
-        { "title": "Open github.dev in a new tab", "keys": "shift+.", "level": "complete" }
+        {
+          "title": "Go to Code",
+          "keys": "g c",
+          "level": "core"
+        },
+        {
+          "title": "Go to Issues",
+          "keys": "g i",
+          "level": "core"
+        },
+        {
+          "title": "Go to Pull requests",
+          "keys": "g p",
+          "level": "core"
+        },
+        {
+          "title": "Open in github.dev editor",
+          "keys": ".",
+          "level": "core"
+        },
+        {
+          "title": "Go to Actions",
+          "keys": "g a",
+          "level": "extended"
+        },
+        {
+          "title": "Go to Projects",
+          "keys": "g b",
+          "level": "extended"
+        },
+        {
+          "title": "Go to Wiki",
+          "keys": "g w",
+          "level": "extended"
+        },
+        {
+          "title": "Go to Discussions",
+          "keys": "g g",
+          "level": "extended"
+        },
+        {
+          "title": "Open github.dev in a new tab",
+          "keys": "shift+.",
+          "level": "complete"
+        }
       ]
     },
     {
       "title": "Code",
+      "pages": [
+        "Code"
+      ],
       "shortcuts": [
-        { "title": "Find file", "keys": "t", "level": "core" },
-        { "title": "Switch branch or tag", "keys": "w", "level": "extended" },
-        { "title": "Jump to line", "keys": "l", "level": "extended" },
-        { "title": "Permalink to this version", "keys": "y", "level": "extended" },
-        { "title": "Open blame", "keys": "b", "level": "extended" }
-      ]
-    },
-    {
-      "title": "Issues & PRs",
-      "shortcuts": [
-        { "title": "Submit comment", "keys": "cmd+enter", "level": "core" },
-        { "title": "Create issue (in Issues tab)", "keys": "c", "level": "extended" },
-        { "title": "Set assignee", "keys": "a", "level": "extended" },
-        { "title": "Set labels", "keys": "l", "level": "extended" },
-        { "title": "Set milestone", "keys": "m", "level": "extended" },
-        { "title": "Request reviewer", "keys": "q", "level": "extended" },
-        { "title": "Quote selection in reply", "keys": "r", "level": "extended" },
-        { "title": "Toggle write / preview", "keys": "shift+cmd+p", "level": "extended" }
+        {
+          "title": "Find file",
+          "keys": "t",
+          "level": "core"
+        },
+        {
+          "title": "Switch branch or tag",
+          "keys": "w",
+          "level": "extended"
+        },
+        {
+          "title": "Jump to line",
+          "keys": "l",
+          "level": "extended"
+        },
+        {
+          "title": "Permalink to this version",
+          "keys": "y",
+          "level": "extended"
+        },
+        {
+          "title": "Open blame",
+          "keys": "b",
+          "level": "extended"
+        }
       ]
     },
     {
       "title": "Issue & PR lists",
-      "level": "complete",
+      "pages": [
+        "Issues",
+        "Pull requests"
+      ],
       "shortcuts": [
-        { "title": "Open selected issue", "keys": "o or enter" },
-        { "title": "Focus the filter bar", "keys": "cmd+/" },
-        { "title": "Filter by author", "keys": "u" },
-        { "title": "Filter by label", "keys": "l" },
-        { "title": "Filter by assignee", "keys": "a" },
-        { "title": "Filter by milestone", "keys": "m" }
+        {
+          "title": "New issue (issue list)",
+          "keys": "c",
+          "level": "core"
+        },
+        {
+          "title": "Open selected issue",
+          "keys": "o or enter",
+          "level": "core"
+        },
+        {
+          "title": "Focus the filter bar",
+          "keys": "cmd+/",
+          "level": "core"
+        },
+        {
+          "title": "Filter by author",
+          "keys": "u",
+          "level": "extended"
+        },
+        {
+          "title": "Filter by label",
+          "keys": "l",
+          "level": "extended"
+        },
+        {
+          "title": "Filter by assignee",
+          "keys": "a",
+          "level": "extended"
+        },
+        {
+          "title": "Filter by milestone",
+          "keys": "m",
+          "level": "complete"
+        }
+      ]
+    },
+    {
+      "title": "Issues & PRs",
+      "pages": [
+        "Issue",
+        "Pull request"
+      ],
+      "shortcuts": [
+        {
+          "title": "Submit comment",
+          "keys": "cmd+enter",
+          "level": "core"
+        },
+        {
+          "title": "Set assignee",
+          "keys": "a",
+          "level": "core"
+        },
+        {
+          "title": "Set labels",
+          "keys": "l",
+          "level": "core"
+        },
+        {
+          "title": "Set milestone",
+          "keys": "m",
+          "level": "extended"
+        },
+        {
+          "title": "Request reviewer",
+          "keys": "q",
+          "level": "extended"
+        },
+        {
+          "title": "Quote selection in reply",
+          "keys": "r",
+          "level": "extended"
+        },
+        {
+          "title": "Toggle write / preview",
+          "keys": "shift+cmd+p",
+          "level": "extended"
+        }
       ]
     },
     {
       "title": "PR changes",
-      "level": "complete",
+      "pages": [
+        "Pull request"
+      ],
       "shortcuts": [
-        { "title": "Open list of commits", "keys": "c" },
-        { "title": "Open list of changed files", "keys": "t" },
-        { "title": "Next / previous file", "keys": "j or k" },
-        { "title": "Add a single review comment", "keys": "shift+cmd+enter" }
+        {
+          "title": "Open list of commits",
+          "keys": "c",
+          "level": "core"
+        },
+        {
+          "title": "Open list of changed files",
+          "keys": "t",
+          "level": "core"
+        },
+        {
+          "title": "Next / previous file",
+          "keys": "j or k",
+          "level": "extended"
+        },
+        {
+          "title": "Add a single review comment",
+          "keys": "shift+cmd+enter",
+          "level": "extended"
+        }
       ]
     },
     {
       "title": "Writing",
-      "level": "complete",
+      "pages": [
+        "Issue",
+        "Pull request"
+      ],
       "shortcuts": [
-        { "title": "Bold", "keys": "cmd+b" },
-        { "title": "Italic", "keys": "cmd+i" },
-        { "title": "Inline code", "keys": "cmd+e" },
-        { "title": "Insert link", "keys": "cmd+k" }
+        {
+          "title": "Bold",
+          "keys": "cmd+b",
+          "level": "extended"
+        },
+        {
+          "title": "Italic",
+          "keys": "cmd+i",
+          "level": "extended"
+        },
+        {
+          "title": "Inline code",
+          "keys": "cmd+e",
+          "level": "complete"
+        },
+        {
+          "title": "Insert link",
+          "keys": "cmd+k",
+          "level": "complete"
+        }
       ]
     },
     {
       "title": "Notifications",
-      "level": "complete",
+      "pages": [
+        "Notifications"
+      ],
       "shortcuts": [
-        { "title": "Mark as done", "keys": "e" },
-        { "title": "Mark as read", "keys": "shift+i" },
-        { "title": "Mark as unread", "keys": "shift+u" },
-        { "title": "Unsubscribe", "keys": "shift+m" }
+        {
+          "title": "Mark as done",
+          "keys": "e",
+          "level": "core"
+        },
+        {
+          "title": "Mark as read",
+          "keys": "shift+i",
+          "level": "core"
+        },
+        {
+          "title": "Mark as unread",
+          "keys": "shift+u",
+          "level": "extended"
+        },
+        {
+          "title": "Unsubscribe",
+          "keys": "shift+m",
+          "level": "extended"
+        }
       ]
     }
   ]

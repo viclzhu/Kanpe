@@ -5,6 +5,7 @@ import KanpeCore
 // Debug modes (need the launching terminal to have Accessibility access):
 //   Kanpe --dump <bundle-id>                 print what the panel would show for a running app
 //   Kanpe --render <bundle-id> <out.png> [url]   render the panel to a PNG (optional URL overrides the tab)
+//        [--level core|extended|complete] [--hide-menus] [--all-pages]
 let args = CommandLine.arguments
 if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let bundleID = args[flag + 1]
@@ -20,12 +21,18 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let matched = url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
                                host: url.flatMap(SiteMatcher.normalizedHost),
-                               sites: matched.map { SiteInfo(name: $0.name, level: level, availableLevels: $0.availableLevels) },
+                               sites: matched.map { pack in
+                                   SiteInfo(name: pack.name, level: level, availableLevels: pack.availableLevels,
+                                            pages: url.map(pack.pages(for:)) ?? [],
+                                            pageFiltering: pack.hasPageSpecificGroups ? !args.contains("--all-pages") : nil)
+                               },
                                groups: [], appMenus: nil)
     var renderContent = content
     let menus = MenuReader.groups(pid: pid)
     let hideMenus = args.contains("--hide-menus")
-    renderContent.groups = matched.flatMap { $0.displayGroups(level: level) } + (hideMenus ? [] : menus)
+    renderContent.groups = zip(matched, content.sites).flatMap { pack, site in
+        pack.displayGroups(level: level, pages: site.pageFiltering == true ? site.pages : nil)
+    } + (hideMenus ? [] : menus)
     renderContent.appMenus = .init(visible: !hideMenus, count: menus.reduce(0) { $0 + $1.shortcuts.count })
     _ = NSApplication.shared
     let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame

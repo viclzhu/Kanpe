@@ -37,7 +37,40 @@ public enum DetailLevel: String, Codable, CaseIterable, Comparable, Sendable {
 /// `level` ("core" | "extended" | "complete") is the lowest detail level at which a shortcut
 /// appears. It can be set on a group (applies to all its shortcuts) and overridden per shortcut.
 /// Untagged shortcuts are "core", so packs without levels always show everything.
+///
+/// `pages` (optional) name parts of the site by URL path, and a group's `pages` limits it to
+/// those parts. Groups without `pages` show everywhere on the site:
+///
+///     "pages": [ { "name": "Issues", "paths": ["/*/*/issues", "/*/*/issues/**"] } ],
+///     "groups": [ { "title": "Issues", "pages": ["Issues"], "shortcuts": [ … ] } ]
+///
+/// See `PathPattern` for the path syntax.
 public struct SitePack: Codable, Hashable, Sendable {
+    /// A named part of a site, identified by URL path patterns.
+    public struct Page: Codable, Hashable, Sendable {
+        public var name: String
+        public var paths: [String]
+
+        public init(name: String, paths: [String]) {
+            self.name = name
+            self.paths = paths
+        }
+
+        /// True if any positive pattern matches and no "!" pattern does.
+        public func matches(path: String) -> Bool {
+            var included = false
+            for raw in paths {
+                let p = raw.trimmingCharacters(in: .whitespaces)
+                if p.hasPrefix("!") {
+                    if PathPattern.matches(String(p.dropFirst()), path: path) { return false }
+                } else if !included, PathPattern.matches(p, path: path) {
+                    included = true
+                }
+            }
+            return included
+        }
+    }
+
     public struct Entry: Codable, Hashable, Sendable {
         public var title: String
         public var keys: String
@@ -47,7 +80,18 @@ public struct SitePack: Codable, Hashable, Sendable {
     public struct Group: Codable, Hashable, Sendable {
         public var title: String
         public var level: DetailLevel?
+        /// Names of the pages this group belongs to. `nil` or empty: every page of the site.
+        public var pages: [String]?
         public var shortcuts: [Entry]
+
+        public init(title: String, level: DetailLevel? = nil, pages: [String]? = nil, shortcuts: [Entry]) {
+            self.title = title
+            self.level = level
+            self.pages = pages?.isEmpty == true ? nil : pages
+            self.shortcuts = shortcuts
+        }
+
+        var isPageSpecific: Bool { !(pages ?? []).isEmpty }
 
         func level(of entry: Entry) -> DetailLevel {
             entry.level ?? level ?? .core
@@ -56,7 +100,24 @@ public struct SitePack: Codable, Hashable, Sendable {
 
     public var name: String
     public var match: [String]
+    public var pages: [Page]?
     public var groups: [Group]
+
+    public init(name: String, match: [String], pages: [Page]? = nil, groups: [Group]) {
+        self.name = name
+        self.match = match
+        self.pages = pages?.isEmpty == true ? nil : pages
+        self.groups = groups
+    }
+
+    /// Whether any group is limited to particular pages (so page filtering changes anything).
+    public var hasPageSpecificGroups: Bool { groups.contains(where: \.isPageSpecific) }
+
+    /// Names of the pages `url` is on, in pack order.
+    public func pages(for url: URL) -> [String] {
+        let path = url.path.isEmpty ? "/" : url.path
+        return (pages ?? []).filter { $0.matches(path: path) }.map(\.name)
+    }
 
     /// Levels that actually change what's shown. Empty when the pack isn't tagged with
     /// levels (or uses only one), in which case there's nothing to choose between.
@@ -73,8 +134,17 @@ public struct SitePack: Codable, Hashable, Sendable {
     /// Converts to display groups, keeping only shortcuts at or below `level` and dropping
     /// groups that end up empty. Group titles are prefixed with the pack name so they stay
     /// distinguishable from app menu groups.
-    public func displayGroups(level: DetailLevel = .complete) -> [ShortcutGroup] {
-        let visible: [(Group, [Entry])] = groups.compactMap { group in
+    ///
+    /// With `pages` (the pages the current URL is on), page-specific groups show only on their
+    /// pages, and come first since they're the most relevant. With `nil`, every group shows.
+    public func displayGroups(level: DetailLevel = .complete, pages current: [String]? = nil) -> [ShortcutGroup] {
+        var ordered = groups
+        if let current {
+            let here = Set(current)
+            ordered = groups.filter { $0.isPageSpecific && !here.isDisjoint(with: $0.pages ?? []) }
+                + groups.filter { !$0.isPageSpecific }
+        }
+        let visible: [(Group, [Entry])] = ordered.compactMap { group in
             let entries = group.shortcuts.filter { group.level(of: $0) <= level }
             return entries.isEmpty ? nil : (group, entries)
         }
@@ -130,6 +200,62 @@ public enum SiteMatcher {
 
     public static func packs(for url: URL, in packs: [SitePack]) -> [SitePack] {
         packs.filter { pack in pack.match.contains { matches(pattern: $0, url: url) } }
+    }
+}
+
+/// URL path patterns for site pages. Matching is by path segment and ignores case and a
+/// trailing slash; the query and fragment are ignored.
+///
+/// - `*` matches exactly one segment: `/*/*` is "/owner/repo".
+/// - `**` matches any number of segments, including none: `/*/*/issues/**` is the issue list
+///   and every page under it.
+/// - Within a segment, `*` is a wildcard: `/*/*/pull*` matches "pull" and "pulls".
+/// - `{a,b}` matches either: `/{issues,pulls}` matches "/issues" and "/pulls".
+/// - In a page's list, a leading `!` excludes: `!/{settings,orgs}/**`.
+public enum PathPattern {
+    public static func matches(_ pattern: String, path: String) -> Bool {
+        let p = segments(pattern)
+        let s = segments(path)
+        return match(p[...], s[...])
+    }
+
+    static func segments(_ path: String) -> [String] {
+        path.lowercased().split(separator: "/", omittingEmptySubsequences: true).map(String.init)
+    }
+
+    private static func match(_ p: ArraySlice<String>, _ s: ArraySlice<String>) -> Bool {
+        guard let first = p.first else { return s.isEmpty }
+        if first == "**" {
+            // Zero segments, or consume one and stay on "**".
+            return match(p.dropFirst(), s) || (!s.isEmpty && match(p, s.dropFirst()))
+        }
+        guard let segment = s.first, segmentMatches(first, segment) else { return false }
+        return match(p.dropFirst(), s.dropFirst())
+    }
+
+    /// Glob within one segment: `*` matches any run of characters; `{a,b}` is either.
+    private static func segmentMatches(_ pattern: String, _ segment: String) -> Bool {
+        if pattern == "*" { return true }
+        if let open = pattern.firstIndex(of: "{"), let close = pattern[open...].firstIndex(of: "}") {
+            let head = pattern[..<open], tail = pattern[pattern.index(after: close)...]
+            return pattern[pattern.index(after: open)..<close].split(separator: ",", omittingEmptySubsequences: false)
+                .contains { segmentMatches(String(head) + $0 + tail, segment) }
+        }
+        guard pattern.contains("*") else { return pattern == segment }
+        let parts = pattern.split(separator: "*", omittingEmptySubsequences: false).map(String.init)
+        var rest = segment[...]
+        for (i, part) in parts.enumerated() {
+            if i == 0 {
+                guard rest.hasPrefix(part) else { return false }
+                rest = rest.dropFirst(part.count)
+            } else if i == parts.count - 1 {
+                return part.isEmpty || rest.hasSuffix(part)
+            } else if !part.isEmpty {
+                guard let r = rest.range(of: part) else { return false }
+                rest = rest[r.upperBound...]
+            }
+        }
+        return rest.isEmpty
     }
 }
 
