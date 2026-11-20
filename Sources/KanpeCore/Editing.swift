@@ -5,6 +5,8 @@ import Foundation
 public struct EditableSite: Identifiable, Hashable, Sendable {
     public struct Shortcut: Identifiable, Hashable, Sendable {
         public var id = UUID()
+        /// The pack's stable `id` for this shortcut, kept through renames (nil for new rows).
+        public var key: String?
         public var title: String
         public var keys: String
         /// Explicit level. `nil` means "inherit from the group".
@@ -20,6 +22,7 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
     /// A named part of the site, matched by URL path patterns (see `PathPattern`).
     public struct Page: Identifiable, Hashable, Sendable {
         public var id = UUID()
+        public var key: String?
         public var name: String
         public var paths: [String]
 
@@ -60,6 +63,7 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
 
     public struct Group: Identifiable, Hashable, Sendable {
         public var id = UUID()
+        public var key: String?
         public var title: String
         public var level: DetailLevel?
         /// Pages this group is limited to. Empty: every page.
@@ -110,7 +114,11 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
     }
 
     public init(_ pack: SitePack, fileURL: URL?) {
-        var pages = (pack.pages ?? []).map { Page(name: $0.name, paths: $0.paths) }
+        var pages = (pack.pages ?? []).map { p -> Page in
+            var page = Page(name: p.name, paths: p.paths)
+            page.key = p.id
+            return page
+        }
         // A group may name a page that isn't defined; keep it as an empty page so the link
         // isn't silently lost (the editor flags pages without paths).
         for name in pack.groups.flatMap({ $0.pages ?? [] }) where !pages.contains(where: { $0.name == name }) {
@@ -126,8 +134,14 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
             match: pack.match,
             pages: pages,
             groups: pack.groups.map { g in
-                Group(title: g.title, level: g.level, pageIDs: ids(g.pages),
-                      shortcuts: g.shortcuts.map { Shortcut(title: $0.title, keys: $0.keys, level: $0.level) })
+                var group = Group(title: g.title, level: g.level, pageIDs: ids(g.pages),
+                                  shortcuts: g.shortcuts.map { s in
+                                      var shortcut = Shortcut(title: s.title, keys: s.keys, level: s.level)
+                                      shortcut.key = s.id
+                                      return shortcut
+                                  })
+                group.key = g.id
+                return group
             }
         )
     }
@@ -159,15 +173,16 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
             name: name.trimmingCharacters(in: .whitespaces),
             updated: updated,
             match: match,
-            pages: pages.map { SitePack.Page(name: $0.name.trimmingCharacters(in: .whitespaces), paths: $0.paths) },
+            pages: pages.map { SitePack.Page(id: $0.key, name: $0.name.trimmingCharacters(in: .whitespaces), paths: $0.paths) },
             groups: groups.map { g in
                 SitePack.Group(
+                    id: g.key,
                     title: g.title,
                     level: g.level,
                     pages: pageNames(of: g).map { $0.trimmingCharacters(in: .whitespaces) },
                     shortcuts: g.shortcuts
                         .filter { !($0.title.trimmingCharacters(in: .whitespaces).isEmpty && $0.keys.trimmingCharacters(in: .whitespaces).isEmpty) }
-                        .map { SitePack.Entry(title: $0.title, keys: $0.keys.trimmingCharacters(in: .whitespaces), level: $0.level) }
+                        .map { SitePack.Entry(id: $0.key, title: $0.title, keys: $0.keys.trimmingCharacters(in: .whitespaces), level: $0.level) }
                 )
             }
         )

@@ -51,10 +51,13 @@ public enum DetailLevel: String, Codable, CaseIterable, Comparable, Sendable {
 public struct SitePack: Codable, Hashable, Sendable {
     /// A named part of a site, identified by URL path patterns.
     public struct Page: Codable, Hashable, Sendable {
+        /// Stable identity for overrides (see `SiteOverrides`). Required in bundled packs.
+        public var id: String?
         public var name: String
         public var paths: [String]
 
-        public init(name: String, paths: [String]) {
+        public init(id: String? = nil, name: String, paths: [String]) {
+            self.id = id
             self.name = name
             self.paths = paths
         }
@@ -75,19 +78,30 @@ public struct SitePack: Codable, Hashable, Sendable {
     }
 
     public struct Entry: Codable, Hashable, Sendable {
+        public var id: String?
         public var title: String
         public var keys: String
         public var level: DetailLevel?
+
+        public init(id: String? = nil, title: String, keys: String, level: DetailLevel? = nil) {
+            self.id = id
+            self.title = title
+            self.keys = keys
+            self.level = level
+        }
     }
 
     public struct Group: Codable, Hashable, Sendable {
+        public var id: String?
         public var title: String
         public var level: DetailLevel?
         /// Names of the pages this group belongs to. `nil` or empty: every page of the site.
         public var pages: [String]?
         public var shortcuts: [Entry]
 
-        public init(title: String, level: DetailLevel? = nil, pages: [String]? = nil, shortcuts: [Entry]) {
+        public init(id: String? = nil, title: String, level: DetailLevel? = nil, pages: [String]? = nil,
+                    shortcuts: [Entry]) {
+            self.id = id
             self.title = title
             self.level = level
             self.pages = pages?.isEmpty == true ? nil : pages
@@ -267,11 +281,20 @@ public enum PathPattern {
     }
 }
 
+/// Where packs live and how edits are stored.
+///
+/// - **Built-in packs** are read straight from the app (`bundledDirectory`). The user's changes
+///   to one are stored as `<name>.edits.json` in `directory` (see `SiteOverrides`) and applied
+///   when packs load, so updates to the built-in pack and the user's changes are merged.
+/// - **The user's own packs** are complete `*.json` files in `directory`. One with the same
+///   file name as a built-in pack replaces it entirely.
 public struct SitePackStore {
     public let directory: URL
+    public let bundledDirectory: URL?
 
-    public init(directory: URL) {
+    public init(directory: URL, bundledDirectory: URL? = nil) {
         self.directory = directory
+        self.bundledDirectory = bundledDirectory
     }
 
     public static var defaultDirectory: URL {
@@ -279,156 +302,30 @@ public struct SitePackStore {
         return base.appendingPathComponent("Kanpe/Sites", isDirectory: true)
     }
 
-    /// Installs bundled packs into the user's folder.
-    ///
-    /// New packs are copied. A pack that was installed before is replaced by the bundled
-    /// version only if the user hasn't edited it (its content still matches what we installed,
-    /// tracked in `.installed.json`). Edited packs are never overwritten.
-    public func installDefaults(from bundledDirectory: URL?) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        guard let bundledDirectory,
-              let files = try? fm.contentsOfDirectory(at: bundledDirectory, includingPropertiesForKeys: nil)
-        else { return }
+    static let editsSuffix = ".edits.json"
 
-        var manifest = readManifest()
-
-        for file in files where file.pathExtension == "json" {
-            let name = file.lastPathComponent
-            let target = directory.appendingPathComponent(name)
-            let bundled = try Data(contentsOf: file)
-            let bundledDigest = Self.digest(bundled)
-
-            guard fm.fileExists(atPath: target.path) else {
-                // Installed before and now missing: the user deleted it. Don't bring it back.
-                if manifest[name] == nil {
-                    try bundled.write(to: target, options: .atomic)
-                    manifest[name] = bundledDigest
-                }
-                continue
-            }
-            if let existing = try? Data(contentsOf: target) {
-                let existingDigest = Self.digest(existing)
-                if existingDigest == bundledDigest {
-                    manifest[name] = bundledDigest // already current
-                    continue
-                }
-                guard manifest[name] == existingDigest else { continue } // user-edited (or unknown): keep
-            }
-            try bundled.write(to: target, options: .atomic)
-            manifest[name] = bundledDigest
-        }
-        try writeManifest(manifest)
-    }
-
-    // MARK: Install manifest (tracks what we installed, to tell user edits apart)
-
-    private var manifestURL: URL { directory.appendingPathComponent(".installed.json") }
-
-    private func readManifest() -> [String: String] {
-        (try? JSONDecoder().decode([String: String].self, from: Data(contentsOf: manifestURL))) ?? [:]
-    }
-
-    private func writeManifest(_ manifest: [String: String]) throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
-    }
-
-    // MARK: Editing
-
-    /// Writes a pack as formatted JSON.
-    public func save(_ pack: SitePack, to url: URL) throws {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try Self.encode(pack).write(to: url, options: .atomic)
-    }
-
-    public static func encode(_ pack: SitePack) throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-        return try encoder.encode(pack)
-    }
-
-    /// Deletes a pack file. Built-in packs stay deleted (see `installDefaults`).
-    public func delete(_ url: URL) throws {
-        try FileManager.default.removeItem(at: url)
-    }
-
-    /// A file name for a new pack, derived from its name and not clashing with existing files.
-    public func newFileURL(forName name: String) -> URL {
-        let slug = name.lowercased()
-            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
-            .joined()
-            .split(separator: "-").joined(separator: "-")
-        let base = slug.isEmpty ? "site" : slug
-        var candidate = directory.appendingPathComponent("\(base).json")
-        var n = 2
-        while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = directory.appendingPathComponent("\(base)-\(n).json")
-            n += 1
-        }
-        return candidate
-    }
-
-    /// The bundled pack with this file name, if there is one (i.e. the pack is built in).
-    public func bundledPackURL(for fileURL: URL, in bundledDirectory: URL?) -> URL? {
-        guard let url = bundledDirectory?.appendingPathComponent(fileURL.lastPathComponent),
-              FileManager.default.fileExists(atPath: url.path) else { return nil }
-        return url
-    }
-
-    /// Built-in packs the user has deleted.
-    public func missingBundledPacks(in bundledDirectory: URL?) -> [URL] {
-        guard let bundledDirectory,
-              let files = try? FileManager.default.contentsOfDirectory(at: bundledDirectory, includingPropertiesForKeys: nil)
-        else { return [] }
-        return files.filter {
-            $0.pathExtension == "json" &&
-                !FileManager.default.fileExists(atPath: directory.appendingPathComponent($0.lastPathComponent).path)
-        }
-    }
-
-    /// Brings back deleted built-in packs. Returns how many were restored.
-    @discardableResult
-    public func restoreMissingBundledPacks(from bundledDirectory: URL?) throws -> Int {
-        let missing = missingBundledPacks(in: bundledDirectory)
-        for source in missing {
-            try revertToBundled(directory.appendingPathComponent(source.lastPathComponent), from: bundledDirectory)
-        }
-        return missing.count
-    }
-
-    /// Replaces the user's copy with the bundled version (and marks it unedited, so future
-    /// app updates apply to it again).
-    public func revertToBundled(_ fileURL: URL, from bundledDirectory: URL?) throws {
-        guard let source = bundledPackURL(for: fileURL, in: bundledDirectory) else { return }
-        let data = try Data(contentsOf: source)
-        try data.write(to: fileURL, options: .atomic)
-        var manifest = readManifest()
-        manifest[fileURL.lastPathComponent] = Self.digest(data)
-        try writeManifest(manifest)
-    }
-
-    /// Stable content fingerprint (FNV-1a 64). Only used to detect edits, not for security.
-    static func digest(_ data: Data) -> String {
-        var hash: UInt64 = 0xcbf29ce484222325
-        for byte in data {
-            hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
-        }
-        return String(hash, radix: 16)
-    }
+    // MARK: Loading
 
     public struct LoadedPack {
+        /// The user's file for their own packs; the bundled file for built-in packs.
         public var fileURL: URL
         public var pack: SitePack
         /// The file's modification date, used when the pack has no `updated` date.
         public var modified: Date?
+        public var isBuiltIn: Bool
+        /// Built-in packs: the user has changes stored for it.
+        public var isCustomized: Bool
+        /// Built-in packs: changes that no longer apply (see `SiteOverrides.Applied`).
+        public var unapplied: [String]
 
-        public init(fileURL: URL, pack: SitePack, modified: Date? = nil) {
+        public init(fileURL: URL, pack: SitePack, modified: Date? = nil, isBuiltIn: Bool = false,
+                    isCustomized: Bool = false, unapplied: [String] = []) {
             self.fileURL = fileURL
             self.pack = pack
             self.modified = modified
+            self.isBuiltIn = isBuiltIn
+            self.isCustomized = isCustomized
+            self.unapplied = unapplied
         }
 
         /// When the shortcuts were last updated: the pack's `updated` day, else the file's date.
@@ -442,22 +339,238 @@ public struct SitePackStore {
     }
 
     public func load() -> LoadResult {
-        let fm = FileManager.default
-        let files = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         var loaded: [LoadedPack] = []
         var errors: [(String, String)] = []
-        let decoder = JSONDecoder()
-        for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where file.pathExtension == "json" && !file.lastPathComponent.hasPrefix(".") {
+        let userFiles = Self.packFiles(in: directory)
+        for file in userFiles {
             do {
-                let data = try Data(contentsOf: file)
-                let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-                loaded.append(LoadedPack(fileURL: file, pack: try decoder.decode(SitePack.self, from: data),
-                                         modified: modified))
+                loaded.append(LoadedPack(fileURL: file, pack: try Self.decode(file), modified: Self.modified(file)))
             } catch {
                 errors.append((file.lastPathComponent, String(describing: error)))
             }
         }
+        let shadowed = Set(userFiles.map(\.lastPathComponent))
+        for file in bundledFiles() where !shadowed.contains(file.lastPathComponent) {
+            do {
+                let base = try Self.decode(file)
+                let overrides = try readOverrides(for: file)
+                if overrides?.deleted == true { continue }
+                let applied = overrides?.apply(to: base)
+                loaded.append(LoadedPack(fileURL: file, pack: applied?.pack ?? base, modified: Self.modified(file),
+                                         isBuiltIn: true, isCustomized: overrides.map { !$0.isEmpty } ?? false,
+                                         unapplied: applied?.unapplied ?? []))
+            } catch {
+                errors.append((editsURL(for: file).lastPathComponent, String(describing: error)))
+            }
+        }
+        loaded.sort { $0.fileURL.lastPathComponent < $1.fileURL.lastPathComponent }
         return LoadResult(loaded: loaded, errors: errors)
+    }
+
+    /// `*.json` packs in a folder (not hidden files, not edits files).
+    static func packFiles(in folder: URL?) -> [URL] {
+        guard let folder,
+              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        else { return [] }
+        return files
+            .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasPrefix(".") && !$0.lastPathComponent.hasSuffix(editsSuffix) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    func bundledFiles() -> [URL] { Self.packFiles(in: bundledDirectory) }
+
+    static func decode(_ url: URL) throws -> SitePack {
+        try JSONDecoder().decode(SitePack.self, from: Data(contentsOf: url))
+    }
+
+    static func modified(_ url: URL) -> Date? {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+    }
+
+    // MARK: Built-in packs and their overrides
+
+    /// True if `url` is a built-in pack (as returned in `LoadedPack.fileURL`).
+    public func isBuiltIn(_ url: URL) -> Bool {
+        guard let bundledDirectory else { return false }
+        return url.deletingLastPathComponent().standardizedFileURL == bundledDirectory.standardizedFileURL
+    }
+
+    /// Where the user's changes to a built-in pack are stored.
+    public func editsURL(for builtIn: URL) -> URL {
+        directory.appendingPathComponent(builtIn.deletingPathExtension().lastPathComponent + Self.editsSuffix)
+    }
+
+    public func readOverrides(for builtIn: URL) throws -> SiteOverrides? {
+        let url = editsURL(for: builtIn)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try JSONDecoder().decode(SiteOverrides.self, from: Data(contentsOf: url))
+    }
+
+    /// Writes the overrides, or removes the file when there's nothing left to store.
+    public func writeOverrides(_ overrides: SiteOverrides, for builtIn: URL) throws {
+        let url = editsURL(for: builtIn)
+        if overrides.isEmpty {
+            if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+            return
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        try encoder.encode(overrides).write(to: url, options: .atomic)
+    }
+
+    // MARK: Editing
+
+    /// Saves a pack. For a built-in pack only the differences from it are written.
+    public func save(_ pack: SitePack, to url: URL) throws {
+        if isBuiltIn(url) {
+            var overrides = SiteOverrides.diff(base: try Self.decode(url), edited: pack)
+            overrides.deleted = try readOverrides(for: url)?.deleted
+            try writeOverrides(overrides, for: url)
+        } else {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try Self.encode(pack).write(to: url, options: .atomic)
+        }
+    }
+
+    public static func encode(_ pack: SitePack) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        return try encoder.encode(pack)
+    }
+
+    /// Deletes a pack. A built-in pack is only marked deleted (keeping the user's changes), so
+    /// `restoreDeletedBuiltIns` can bring it back.
+    public func delete(_ url: URL) throws {
+        if isBuiltIn(url) {
+            var overrides = try readOverrides(for: url) ?? SiteOverrides()
+            overrides.deleted = true
+            try writeOverrides(overrides, for: url)
+        } else {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// Drops every change to a built-in pack.
+    public func revertToBuiltIn(_ url: URL) throws {
+        try writeOverrides(SiteOverrides(), for: url)
+    }
+
+    /// Built-in packs the user has deleted.
+    public func deletedBuiltIns() -> [URL] {
+        bundledFiles().filter { (try? readOverrides(for: $0))??.deleted == true }
+    }
+
+    /// Brings back deleted built-in packs, with any changes the user had made. Returns how many.
+    @discardableResult
+    public func restoreDeletedBuiltIns() throws -> Int {
+        let deleted = deletedBuiltIns()
+        for url in deleted {
+            var overrides = try readOverrides(for: url) ?? SiteOverrides()
+            overrides.deleted = nil
+            try writeOverrides(overrides, for: url)
+        }
+        return deleted.count
+    }
+
+    /// A file name for a new pack, derived from its name and not clashing with existing files
+    /// or built-in packs (which it would replace).
+    public func newFileURL(forName name: String) -> URL {
+        let slug = name.lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
+            .joined()
+            .split(separator: "-").joined(separator: "-")
+        let base = slug.isEmpty ? "site" : slug
+        let builtIn = Set(bundledFiles().map(\.lastPathComponent))
+        func taken(_ url: URL) -> Bool {
+            FileManager.default.fileExists(atPath: url.path) || builtIn.contains(url.lastPathComponent)
+        }
+        var candidate = directory.appendingPathComponent("\(base).json")
+        var n = 2
+        while taken(candidate) {
+            candidate = directory.appendingPathComponent("\(base)-\(n).json")
+            n += 1
+        }
+        return candidate
+    }
+
+    // MARK: Migrating from full copies (Kanpe 0.2.1 and earlier)
+
+    /// Older versions copied built-in packs into `directory` and tracked them in
+    /// `.installed.json` (file name → digest of the copy they installed). This turns those
+    /// copies into overrides: unedited copies are removed, deleted ones are marked deleted,
+    /// and edited ones become the user's changes, worked out against the version they started
+    /// from so updates since then still arrive. Edited copies are moved to `Backups/`. Runs
+    /// once: the manifest is removed afterwards.
+    ///
+    /// `legacyDirectory` holds earlier versions of the bundled packs, named `<name>-<digest>.json`.
+    /// The starting version is the one closest to the user's copy (fewest changes), preferring
+    /// the one the manifest names: a copy may have been updated by hand without the manifest.
+    ///
+    /// Returns the names of packs whose edits were converted.
+    @discardableResult
+    public func migrateLegacyCopies(legacyDirectory: URL?) throws -> [String] {
+        let fm = FileManager.default
+        let manifestURL = directory.appendingPathComponent(".installed.json")
+        guard let manifestData = try? Data(contentsOf: manifestURL),
+              let manifest = try? JSONDecoder().decode([String: String].self, from: manifestData)
+        else { return [] }
+
+        let legacyFiles = Self.packFiles(in: legacyDirectory)
+
+        var converted: [String] = []
+        for builtIn in bundledFiles() {
+            let name = builtIn.lastPathComponent
+            guard let installedDigest = manifest[name] else { continue } // never installed: any file is the user's own
+            let copy = directory.appendingPathComponent(name)
+            guard fm.fileExists(atPath: copy.path) else {
+                try delete(builtIn) // the user deleted it
+                continue
+            }
+            let data = try Data(contentsOf: copy)
+            let digest = Self.digest(data)
+            let bundledDigest = Self.digest(try Data(contentsOf: builtIn))
+            if digest == installedDigest || digest == bundledDigest {
+                try fm.removeItem(at: copy) // an unedited copy
+                continue
+            }
+            guard let edited = try? JSONDecoder().decode(SitePack.self, from: data) else { continue } // unreadable: leave it
+            let current = try Self.decode(builtIn)
+            let stem = builtIn.deletingPathExtension().lastPathComponent
+            var candidates: [(pack: SitePack, preferred: Bool)] = [(current, false)]
+            for file in legacyFiles where file.lastPathComponent.hasPrefix(stem + "-") {
+                guard let data = try? Data(contentsOf: file),
+                      let pack = try? JSONDecoder().decode(SitePack.self, from: data) else { continue }
+                candidates.append((pack, Self.digest(data) == installedDigest))
+            }
+            let mine = edited.adoptingIDs(from: current)
+            let diffs = candidates.map { c in
+                (overrides: SiteOverrides.diff(base: c.pack.adoptingIDs(from: current), edited: mine), preferred: c.preferred)
+            }
+            var overrides = diffs.min { a, b in
+                (a.overrides.changeCount, a.preferred ? 0 : 1) < (b.overrides.changeCount, b.preferred ? 0 : 1)
+            }!.overrides
+            overrides.updated = Self.modified(copy).map { PackDate.string(from: $0) }
+            let backups = directory.appendingPathComponent("Backups", isDirectory: true)
+            try fm.createDirectory(at: backups, withIntermediateDirectories: true)
+            let backup = backups.appendingPathComponent(name)
+            if fm.fileExists(atPath: backup.path) { try fm.removeItem(at: backup) }
+            try fm.moveItem(at: copy, to: backup)
+            try writeOverrides(overrides, for: builtIn)
+            converted.append(name)
+        }
+        try fm.removeItem(at: manifestURL)
+        return converted
+    }
+
+    /// Stable content fingerprint (FNV-1a 64), as used by `.installed.json`. Not for security.
+    public static func digest(_ data: Data) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in data {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(hash, radix: 16)
     }
 }
 

@@ -89,7 +89,7 @@ Debug without the UI (run from a terminal that has Accessibility access):
 
 Open the editor from the menu-bar icon → **Edit Shortcuts…** (⌘,), or click the ✎ button in the panel header to jump straight to the site you're on. The button shows **+** if that site has no shortcuts yet.
 
-- **Sites** are listed in the sidebar. Use **+** / **−** to add or delete one, and right-click a site to **Duplicate**, **Revert to Built-in** or **Show in Finder**. **•••** → **Restore Built-in Sites** brings back built-in sites you deleted.
+- **Sites** are listed in the sidebar. Use **+** / **−** to add or delete one, and right-click a site to **Duplicate**, **Revert to Built-in** (drop your changes to a built-in site) or **Show in Finder**. Built-in sites you've changed have a pencil mark. **•••** → **Restore Built-in Sites** brings back built-in sites you deleted, with any changes you'd made.
 - **Domains** appear as chips. Type a domain and press Return to add it. Subdomains are included, and you can narrow a domain with a path.
 - **Shortcuts:** each row has a description, a keys field and a level.
   - Type keys in the notation described below, or click ◉ and press them. A combination like ⇧⌘P works, and so does a sequence like G then I; recording stops after a short pause.
@@ -100,11 +100,11 @@ Open the editor from the menu-bar icon → **Edit Shortcuts…** (⌘,), or clic
 
 Kanpe stays menu-bar only, with no Dock icon, even while the editor is open. To get back to the editor, use the menu-bar icon → **Edit Shortcuts…** again. If you'd rather have a Dock icon and ⌘Tab while editing, turn on **Show Dock Icon While Editing** in the menu-bar menu. ⌘C/⌘V/⌘X/⌘Z/⌘A and ⌘W work in the editor either way.
 
-Changes save automatically and show in the panel right away. A site you've edited won't be overwritten by app updates.
+Changes save automatically and show in the panel right away. Changes to a built-in site are merged with app updates (see [Your changes to built-in sites](#your-changes-to-built-in-sites)).
 
 ## Site shortcut files
 
-Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use the menu-bar icon → **Open Site Shortcuts Folder**, then **Reload Site Shortcuts** after you edit. Bundled packs are copied there on first launch. Edit them freely: the app never overwrites a pack you've changed.
+Site packs are JSON files. The built-in ones ship inside the app. Your own packs, and your changes to built-in ones, are in `~/Library/Application Support/Kanpe/Sites/`. Use the menu-bar icon → **Open Site Shortcuts Folder**, then **Reload Site Shortcuts** after you edit a file by hand.
 
 ```json
 {
@@ -180,7 +180,21 @@ Path patterns match whole path segments, ignore case, a trailing slash and the q
 
 A URL can be on several pages at once (a repo's issue is on both **Repository** and **Issue**). List pages from general to specific; the panel header shows the last one that matches.
 
-**Updates to bundled packs:** when a new version of the app includes an updated pack, it replaces your copy only if you haven't edited it. Packs you've edited are never overwritten.
+### Your changes to built-in sites
+
+When you edit a built-in site, Kanpe stores only what you changed, in `<site>.edits.json` (for example `github.edits.json`), and applies it on top of the built-in pack each time packs load. So a new version of the app can update a built-in site without losing your changes:
+- Anything you didn't touch follows the built-in pack: new shortcuts, fixed keys, new pages.
+- Each change you made is kept: changed keys, titles or levels, deleted or moved shortcuts, shortcuts and groups you added, renamed pages, and reordering. Changes are per field, so if you changed a shortcut's keys and an update fixes its title, you get both.
+- If you and an update change the same thing, your version wins.
+- If an update removes something you'd changed, the editor says so, and the change is dropped the next time you edit that site.
+
+Changes refer to each item by its `id` (see below), so built-in packs keep their ids when they rename or move things. Undo every change and the edits file goes away. **Revert to Built-in** deletes it.
+
+A pack of your own with the same file name as a built-in one (e.g. your own `github.json`) replaces the built-in one entirely and doesn't get its updates.
+
+**Upgrading from 0.2.1 or earlier:** those versions copied built-in packs into the Sites folder. On first launch, Kanpe removes copies you hadn't edited, and turns edited copies into edits files: it finds the version you started from, so only your changes are kept and updates since then still arrive. Your old file is moved to `Sites/Backups/`.
+
+**`id`** (built-in packs) gives each page, group and shortcut a stable identity, unique within its kind: `"code"` for a group, `"code.open-blame"` for a shortcut in it. `scripts/add-pack-ids.py` adds missing ones without reformatting the file. Your own packs don't need ids.
 
 **`updated`** (optional, `YYYY-MM-DD`) is when the pack's shortcuts were last checked or changed. Hover over the site chip in the panel header (`github.com › Code`) to see it, e.g. "GitHub shortcuts updated Nov 11, 2026 (8 days ago)". The editor shows it under the site name and sets it to today whenever you edit the site. Packs without it show the file's modification date.
 

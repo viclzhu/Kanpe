@@ -19,8 +19,8 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
 
     var isOpen: Bool { window?.isVisible ?? false }
 
-    init(store: SitePackStore, bundledDirectory: URL?, onChange: @escaping () -> Void) {
-        model = EditorModel(store: store, bundledDirectory: bundledDirectory)
+    init(store: SitePackStore, onChange: @escaping () -> Void) {
+        model = EditorModel(store: store)
         super.init()
         model.onChange = onChange
     }

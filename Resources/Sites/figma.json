@@ -3,148 +3,158 @@
   "updated": "2026-11-19",
   "match": ["figma.com"],
   "pages": [
-    { "name": "Design file", "paths": ["/design/**", "/file/**"] },
-    { "name": "FigJam board", "paths": ["/board/**"] },
-    { "name": "Prototype", "paths": ["/proto/**"] }
+    { "id": "design-file", "name": "Design file", "paths": ["/design/**", "/file/**"] },
+    { "id": "figjam-board", "name": "FigJam board", "paths": ["/board/**"] },
+    { "id": "prototype", "name": "Prototype", "paths": ["/proto/**"] }
   ],
   "groups": [
     {
+      "id": "tools",
       "title": "Tools",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Move", "keys": "v", "level": "core" },
-        { "title": "Frame", "keys": "f or a", "level": "core" },
-        { "title": "Rectangle", "keys": "r", "level": "core" },
-        { "title": "Text", "keys": "t", "level": "core" },
-        { "title": "Pen", "keys": "p", "level": "core" },
-        { "title": "Hand (hold)", "keys": "space", "level": "core" },
-        { "title": "Ellipse", "keys": "o", "level": "extended" },
-        { "title": "Line", "keys": "l", "level": "extended" },
-        { "title": "Arrow", "keys": "shift+l", "level": "extended" },
-        { "title": "Comment", "keys": "c", "level": "extended" },
-        { "title": "Section", "keys": "shift+s", "level": "extended" },
-        { "title": "Pencil", "keys": "shift+p", "level": "complete" },
-        { "title": "Hand", "keys": "h", "level": "complete" },
-        { "title": "Scale", "keys": "k", "level": "complete" },
-        { "title": "Slice", "keys": "s", "level": "complete" },
-        { "title": "Place image", "keys": "shift+cmd+k", "level": "complete" }
+        { "id": "tools.move", "title": "Move", "keys": "v", "level": "core" },
+        { "id": "tools.frame", "title": "Frame", "keys": "f or a", "level": "core" },
+        { "id": "tools.rectangle", "title": "Rectangle", "keys": "r", "level": "core" },
+        { "id": "tools.text", "title": "Text", "keys": "t", "level": "core" },
+        { "id": "tools.pen", "title": "Pen", "keys": "p", "level": "core" },
+        { "id": "tools.hand-hold", "title": "Hand (hold)", "keys": "space", "level": "core" },
+        { "id": "tools.ellipse", "title": "Ellipse", "keys": "o", "level": "extended" },
+        { "id": "tools.line", "title": "Line", "keys": "l", "level": "extended" },
+        { "id": "tools.arrow", "title": "Arrow", "keys": "shift+l", "level": "extended" },
+        { "id": "tools.comment", "title": "Comment", "keys": "c", "level": "extended" },
+        { "id": "tools.section", "title": "Section", "keys": "shift+s", "level": "extended" },
+        { "id": "tools.pencil", "title": "Pencil", "keys": "shift+p", "level": "complete" },
+        { "id": "tools.hand", "title": "Hand", "keys": "h", "level": "complete" },
+        { "id": "tools.scale", "title": "Scale", "keys": "k", "level": "complete" },
+        { "id": "tools.slice", "title": "Slice", "keys": "s", "level": "complete" },
+        { "id": "tools.place-image", "title": "Place image", "keys": "shift+cmd+k", "level": "complete" }
       ]
     },
     {
+      "id": "layers",
       "title": "Layers",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Group", "keys": "cmd+g", "level": "core" },
-        { "title": "Ungroup", "keys": "shift+cmd+g", "level": "core" },
-        { "title": "Add auto layout", "keys": "shift+a", "level": "core" },
-        { "title": "Frame selection", "keys": "alt+cmd+g", "level": "extended" },
-        { "title": "Create component", "keys": "alt+cmd+k", "level": "extended" },
-        { "title": "Rename", "keys": "cmd+r", "level": "extended" },
-        { "title": "Show / hide", "keys": "shift+cmd+h", "level": "extended" },
-        { "title": "Lock / unlock", "keys": "shift+cmd+l", "level": "extended" },
-        { "title": "Forward / backward", "keys": "cmd+] or cmd+[", "level": "extended" },
-        { "title": "To front / to back", "keys": "alt+cmd+] or alt+cmd+[", "level": "complete" },
-        { "title": "Remove auto layout", "keys": "alt+shift+a", "level": "complete" },
-        { "title": "Detach instance", "keys": "alt+cmd+b", "level": "complete" },
-        { "title": "Use as mask", "keys": "ctrl+cmd+m", "level": "complete" },
-        { "title": "Flatten", "keys": "cmd+e", "level": "complete" },
-        { "title": "Outline stroke", "keys": "alt+cmd+o", "level": "complete" },
-        { "title": "Flip horizontal / vertical", "keys": "shift+h or shift+v", "level": "complete" }
+        { "id": "layers.group", "title": "Group", "keys": "cmd+g", "level": "core" },
+        { "id": "layers.ungroup", "title": "Ungroup", "keys": "shift+cmd+g", "level": "core" },
+        { "id": "layers.add-auto-layout", "title": "Add auto layout", "keys": "shift+a", "level": "core" },
+        { "id": "layers.frame-selection", "title": "Frame selection", "keys": "alt+cmd+g", "level": "extended" },
+        { "id": "layers.create-component", "title": "Create component", "keys": "alt+cmd+k", "level": "extended" },
+        { "id": "layers.rename", "title": "Rename", "keys": "cmd+r", "level": "extended" },
+        { "id": "layers.show-hide", "title": "Show / hide", "keys": "shift+cmd+h", "level": "extended" },
+        { "id": "layers.lock-unlock", "title": "Lock / unlock", "keys": "shift+cmd+l", "level": "extended" },
+        { "id": "layers.forward-backward", "title": "Forward / backward", "keys": "cmd+] or cmd+[", "level": "extended" },
+        { "id": "layers.to-front-to-back", "title": "To front / to back", "keys": "alt+cmd+] or alt+cmd+[", "level": "complete" },
+        { "id": "layers.remove-auto-layout", "title": "Remove auto layout", "keys": "alt+shift+a", "level": "complete" },
+        { "id": "layers.detach-instance", "title": "Detach instance", "keys": "alt+cmd+b", "level": "complete" },
+        { "id": "layers.use-as-mask", "title": "Use as mask", "keys": "ctrl+cmd+m", "level": "complete" },
+        { "id": "layers.flatten", "title": "Flatten", "keys": "cmd+e", "level": "complete" },
+        { "id": "layers.outline-stroke", "title": "Outline stroke", "keys": "alt+cmd+o", "level": "complete" },
+        { "id": "layers.flip-horizontal-vertical", "title": "Flip horizontal / vertical", "keys": "shift+h or shift+v", "level": "complete" }
       ]
     },
     {
+      "id": "selection",
       "title": "Selection",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Select children", "keys": "enter", "level": "extended" },
-        { "title": "Select parent", "keys": "shift+enter", "level": "extended" },
-        { "title": "Next / previous sibling", "keys": "tab or shift+tab", "level": "extended" },
-        { "title": "Select inverse", "keys": "shift+cmd+a", "level": "complete" }
+        { "id": "selection.select-children", "title": "Select children", "keys": "enter", "level": "extended" },
+        { "id": "selection.select-parent", "title": "Select parent", "keys": "shift+enter", "level": "extended" },
+        { "id": "selection.next-previous-sibling", "title": "Next / previous sibling", "keys": "tab or shift+tab", "level": "extended" },
+        { "id": "selection.select-inverse", "title": "Select inverse", "keys": "shift+cmd+a", "level": "complete" }
       ]
     },
     {
+      "id": "edit",
       "title": "Edit",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Duplicate", "keys": "cmd+d", "level": "core" },
-        { "title": "Paste over selection", "keys": "shift+cmd+v", "level": "extended" },
-        { "title": "Copy / paste props", "keys": "alt+cmd+c or alt+cmd+v", "level": "extended" },
-        { "title": "Copy as PNG", "keys": "shift+cmd+c", "level": "complete" },
-        { "title": "Export", "keys": "shift+cmd+e", "level": "complete" }
+        { "id": "edit.duplicate", "title": "Duplicate", "keys": "cmd+d", "level": "core" },
+        { "id": "edit.paste-over-selection", "title": "Paste over selection", "keys": "shift+cmd+v", "level": "extended" },
+        { "id": "edit.copy-paste-props", "title": "Copy / paste props", "keys": "alt+cmd+c or alt+cmd+v", "level": "extended" },
+        { "id": "edit.copy-as-png", "title": "Copy as PNG", "keys": "shift+cmd+c", "level": "complete" },
+        { "id": "edit.export", "title": "Export", "keys": "shift+cmd+e", "level": "complete" }
       ]
     },
     {
+      "id": "align",
       "title": "Align",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Align left / right", "keys": "alt+a or alt+d", "level": "extended" },
-        { "title": "Align top / bottom", "keys": "alt+w or alt+s", "level": "extended" },
-        { "title": "Center horiz. / vert.", "keys": "alt+h or alt+v", "level": "extended" },
-        { "title": "Tidy up", "keys": "ctrl+alt+t", "level": "complete" },
-        { "title": "Distribute H / V", "keys": "ctrl+alt+h or ctrl+alt+v", "level": "complete" }
+        { "id": "align.align-left-right", "title": "Align left / right", "keys": "alt+a or alt+d", "level": "extended" },
+        { "id": "align.align-top-bottom", "title": "Align top / bottom", "keys": "alt+w or alt+s", "level": "extended" },
+        { "id": "align.center-horiz-vert", "title": "Center horiz. / vert.", "keys": "alt+h or alt+v", "level": "extended" },
+        { "id": "align.tidy-up", "title": "Tidy up", "keys": "ctrl+alt+t", "level": "complete" },
+        { "id": "align.distribute-h-v", "title": "Distribute H / V", "keys": "ctrl+alt+h or ctrl+alt+v", "level": "complete" }
       ]
     },
     {
+      "id": "text",
       "title": "Text",
       "pages": ["Design file"],
       "level": "complete",
       "shortcuts": [
-        { "title": "Bold / italic / under.", "keys": "cmd+b or cmd+i or cmd+u" },
-        { "title": "Strikethrough", "keys": "shift+cmd+x" },
-        { "title": "Text L / C / R", "keys": "alt+cmd+l or alt+cmd+t or alt+cmd+r" },
-        { "title": "Font size up / down", "keys": "shift+cmd+> or shift+cmd+<" },
-        { "title": "Bullets / numbers", "keys": "shift+cmd+8 or shift+cmd+7" }
+        { "id": "text.bold-italic-under", "title": "Bold / italic / under.", "keys": "cmd+b or cmd+i or cmd+u" },
+        { "id": "text.strikethrough", "title": "Strikethrough", "keys": "shift+cmd+x" },
+        { "id": "text.text-l-c-r", "title": "Text L / C / R", "keys": "alt+cmd+l or alt+cmd+t or alt+cmd+r" },
+        { "id": "text.font-size-up-down", "title": "Font size up / down", "keys": "shift+cmd+> or shift+cmd+<" },
+        { "id": "text.bullets-numbers", "title": "Bullets / numbers", "keys": "shift+cmd+8 or shift+cmd+7" }
       ]
     },
     {
+      "id": "figjam-tools",
       "title": "FigJam tools",
       "pages": ["FigJam board"],
       "shortcuts": [
-        { "title": "Move", "keys": "v", "level": "core" },
-        { "title": "Sticky note", "keys": "s", "level": "core" },
-        { "title": "Text", "keys": "t", "level": "core" },
-        { "title": "Marker", "keys": "m", "level": "core" },
-        { "title": "Connector", "keys": "x", "level": "core" },
-        { "title": "Rectangle / ellipse", "keys": "r or o", "level": "extended" },
-        { "title": "Section", "keys": "shift+s", "level": "extended" },
-        { "title": "Highlighter", "keys": "shift+m", "level": "extended" },
-        { "title": "Comment", "keys": "c", "level": "extended" },
-        { "title": "Hand", "keys": "h", "level": "complete" },
-        { "title": "Stamp", "keys": "e", "level": "complete" },
-        { "title": "Eraser", "keys": "shift+backspace", "level": "complete" }
+        { "id": "figjam-tools.move", "title": "Move", "keys": "v", "level": "core" },
+        { "id": "figjam-tools.sticky-note", "title": "Sticky note", "keys": "s", "level": "core" },
+        { "id": "figjam-tools.text", "title": "Text", "keys": "t", "level": "core" },
+        { "id": "figjam-tools.marker", "title": "Marker", "keys": "m", "level": "core" },
+        { "id": "figjam-tools.connector", "title": "Connector", "keys": "x", "level": "core" },
+        { "id": "figjam-tools.rectangle-ellipse", "title": "Rectangle / ellipse", "keys": "r or o", "level": "extended" },
+        { "id": "figjam-tools.section", "title": "Section", "keys": "shift+s", "level": "extended" },
+        { "id": "figjam-tools.highlighter", "title": "Highlighter", "keys": "shift+m", "level": "extended" },
+        { "id": "figjam-tools.comment", "title": "Comment", "keys": "c", "level": "extended" },
+        { "id": "figjam-tools.hand", "title": "Hand", "keys": "h", "level": "complete" },
+        { "id": "figjam-tools.stamp", "title": "Stamp", "keys": "e", "level": "complete" },
+        { "id": "figjam-tools.eraser", "title": "Eraser", "keys": "shift+backspace", "level": "complete" }
       ]
     },
     {
+      "id": "view",
       "title": "View",
       "pages": ["Design file", "FigJam board"],
       "shortcuts": [
-        { "title": "Zoom in / out", "keys": "+ or -", "level": "core" },
-        { "title": "Zoom to fit", "keys": "shift+1", "level": "core" },
-        { "title": "Zoom to selection", "keys": "shift+2", "level": "core" },
-        { "title": "Zoom to 100%", "keys": "shift+0", "level": "extended" },
-        { "title": "Show / hide UI", "keys": "cmd+\\", "level": "extended" },
-        { "title": "Quick actions", "keys": "cmd+k or cmd+/", "level": "core" },
-        { "title": "Find", "keys": "cmd+f", "level": "extended" },
-        { "title": "Rulers", "keys": "shift+r", "level": "complete" },
-        { "title": "Outlines", "keys": "cmd+y", "level": "complete" },
-        { "title": "Layout grids", "keys": "ctrl+g", "level": "complete" },
-        { "title": "Multiplayer cursors", "keys": "alt+cmd+\\", "level": "complete" },
-        { "title": "Show keyboard shortcuts", "keys": "ctrl+shift+?", "level": "complete" }
+        { "id": "view.zoom-in-out", "title": "Zoom in / out", "keys": "+ or -", "level": "core" },
+        { "id": "view.zoom-to-fit", "title": "Zoom to fit", "keys": "shift+1", "level": "core" },
+        { "id": "view.zoom-to-selection", "title": "Zoom to selection", "keys": "shift+2", "level": "core" },
+        { "id": "view.zoom-to-100", "title": "Zoom to 100%", "keys": "shift+0", "level": "extended" },
+        { "id": "view.show-hide-ui", "title": "Show / hide UI", "keys": "cmd+\\", "level": "extended" },
+        { "id": "view.quick-actions", "title": "Quick actions", "keys": "cmd+k or cmd+/", "level": "core" },
+        { "id": "view.find", "title": "Find", "keys": "cmd+f", "level": "extended" },
+        { "id": "view.rulers", "title": "Rulers", "keys": "shift+r", "level": "complete" },
+        { "id": "view.outlines", "title": "Outlines", "keys": "cmd+y", "level": "complete" },
+        { "id": "view.layout-grids", "title": "Layout grids", "keys": "ctrl+g", "level": "complete" },
+        { "id": "view.multiplayer-cursors", "title": "Multiplayer cursors", "keys": "alt+cmd+\\", "level": "complete" },
+        { "id": "view.show-keyboard-shortcuts", "title": "Show keyboard shortcuts", "keys": "ctrl+shift+?", "level": "complete" }
       ]
     },
     {
+      "id": "prototype",
       "title": "Prototype",
       "pages": ["Design file"],
       "shortcuts": [
-        { "title": "Present", "keys": "alt+cmd+enter", "level": "extended" }
+        { "id": "prototype.present", "title": "Present", "keys": "alt+cmd+enter", "level": "extended" }
       ]
     },
     {
+      "id": "presenting",
       "title": "Presenting",
       "pages": ["Prototype"],
       "shortcuts": [
-        { "title": "Next / previous frame", "keys": "right or left", "level": "core" },
-        { "title": "Restart", "keys": "r", "level": "extended" }
+        { "id": "presenting.next-previous-frame", "title": "Next / previous frame", "keys": "right or left", "level": "core" },
+        { "id": "presenting.restart", "title": "Restart", "keys": "r", "level": "extended" }
       ]
     }
   ]

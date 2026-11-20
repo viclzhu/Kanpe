@@ -4,53 +4,57 @@
   "match": ["mail.google.com"],
   "groups": [
     {
+      "id": "compose-find",
       "title": "Compose & find",
       "shortcuts": [
-        { "title": "Compose", "keys": "c", "level": "core" },
-        { "title": "Search mail", "keys": "/", "level": "core" },
-        { "title": "Send (in compose)", "keys": "cmd+enter", "level": "core" },
-        { "title": "Show keyboard shortcuts", "keys": "?", "level": "extended" }
+        { "id": "compose-find.compose", "title": "Compose", "keys": "c", "level": "core" },
+        { "id": "compose-find.search-mail", "title": "Search mail", "keys": "/", "level": "core" },
+        { "id": "compose-find.send-in-compose", "title": "Send (in compose)", "keys": "cmd+enter", "level": "core" },
+        { "id": "compose-find.show-keyboard-shortcuts", "title": "Show keyboard shortcuts", "keys": "?", "level": "extended" }
       ]
     },
     {
+      "id": "conversations",
       "title": "Conversations",
       "shortcuts": [
-        { "title": "Archive", "keys": "e", "level": "core" },
-        { "title": "Reply", "keys": "r", "level": "core" },
-        { "title": "Reply all", "keys": "a", "level": "core" },
-        { "title": "Forward", "keys": "f", "level": "core" },
-        { "title": "Newer / older conversation", "keys": "k or j", "level": "extended" },
-        { "title": "Open conversation", "keys": "o", "level": "extended" },
-        { "title": "Back to list", "keys": "u", "level": "extended" },
-        { "title": "Select conversation", "keys": "x", "level": "extended" },
-        { "title": "Delete", "keys": "#", "level": "extended" },
-        { "title": "Star", "keys": "s", "level": "extended" },
-        { "title": "Mark as read", "keys": "shift+i", "level": "extended" },
-        { "title": "Mark as unread", "keys": "shift+u", "level": "extended" },
-        { "title": "Undo last action", "keys": "z", "level": "complete" },
-        { "title": "Mute conversation", "keys": "m", "level": "complete" },
-        { "title": "Report as spam", "keys": "!", "level": "complete" },
-        { "title": "Label as…", "keys": "l", "level": "complete" },
-        { "title": "Move to…", "keys": "v", "level": "complete" }
+        { "id": "conversations.archive", "title": "Archive", "keys": "e", "level": "core" },
+        { "id": "conversations.reply", "title": "Reply", "keys": "r", "level": "core" },
+        { "id": "conversations.reply-all", "title": "Reply all", "keys": "a", "level": "core" },
+        { "id": "conversations.forward", "title": "Forward", "keys": "f", "level": "core" },
+        { "id": "conversations.newer-older-conversation", "title": "Newer / older conversation", "keys": "k or j", "level": "extended" },
+        { "id": "conversations.open-conversation", "title": "Open conversation", "keys": "o", "level": "extended" },
+        { "id": "conversations.back-to-list", "title": "Back to list", "keys": "u", "level": "extended" },
+        { "id": "conversations.select-conversation", "title": "Select conversation", "keys": "x", "level": "extended" },
+        { "id": "conversations.delete", "title": "Delete", "keys": "#", "level": "extended" },
+        { "id": "conversations.star", "title": "Star", "keys": "s", "level": "extended" },
+        { "id": "conversations.mark-as-read", "title": "Mark as read", "keys": "shift+i", "level": "extended" },
+        { "id": "conversations.mark-as-unread", "title": "Mark as unread", "keys": "shift+u", "level": "extended" },
+        { "id": "conversations.undo-last-action", "title": "Undo last action", "keys": "z", "level": "complete" },
+        { "id": "conversations.mute-conversation", "title": "Mute conversation", "keys": "m", "level": "complete" },
+        { "id": "conversations.report-as-spam", "title": "Report as spam", "keys": "!", "level": "complete" },
+        { "id": "conversations.label-as", "title": "Label as…", "keys": "l", "level": "complete" },
+        { "id": "conversations.move-to", "title": "Move to…", "keys": "v", "level": "complete" }
       ]
     },
     {
+      "id": "selection",
       "title": "Selection",
       "level": "complete",
       "shortcuts": [
-        { "title": "Select all", "keys": "* a" },
-        { "title": "Deselect all", "keys": "* n" }
+        { "id": "selection.select-all", "title": "Select all", "keys": "* a" },
+        { "id": "selection.deselect-all", "title": "Deselect all", "keys": "* n" }
       ]
     },
     {
+      "id": "go-to",
       "title": "Go to",
       "level": "extended",
       "shortcuts": [
-        { "title": "Inbox", "keys": "g i" },
-        { "title": "Starred", "keys": "g s" },
-        { "title": "Sent", "keys": "g t" },
-        { "title": "Drafts", "keys": "g d" },
-        { "title": "All mail", "keys": "g a", "level": "complete" }
+        { "id": "go-to.inbox", "title": "Inbox", "keys": "g i" },
+        { "id": "go-to.starred", "title": "Starred", "keys": "g s" },
+        { "id": "go-to.sent", "title": "Sent", "keys": "g t" },
+        { "id": "go-to.drafts", "title": "Drafts", "keys": "g d" },
+        { "id": "go-to.all-mail", "title": "All mail", "keys": "g a", "level": "complete" }
       ]
     }
   ]

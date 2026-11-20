@@ -17,7 +17,7 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let url = args.count > flag + 3 && !args[flag + 3].hasPrefix("--") ? URL(string: args[flag + 3]) : BrowserURLReader.urlViaAccessibility(pid: pid, bundleID: bundleID)
     // Optional: --level core|extended|complete (default: Core)
     let level = args.firstIndex(of: "--level").flatMap { args.count > $0 + 1 ? DetailLevel(rawValue: args[$0 + 1]) : nil } ?? .default
-    let loaded = SitePackStore(directory: SitePackStore.defaultDirectory).load().loaded
+    let loaded = SitePackStore.app.load().loaded
     let matched = url.map { SiteMatcher.packs(for: $0, in: loaded.map(\.pack)) } ?? []
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
                                host: url.flatMap(SiteMatcher.normalizedHost),
@@ -60,7 +60,7 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
 if let flag = args.firstIndex(of: "--render-editor"), args.count > flag + 1 {
     MainActor.assumeIsolated {
         _ = NSApplication.shared
-        let model = EditorModel(store: SitePackStore(directory: SitePackStore.defaultDirectory), bundledDirectory: nil)
+        let model = EditorModel(store: SitePackStore.app)
         if args.count > flag + 2, let site = model.sites.first(where: { $0.name == args[flag + 2] }) {
             model.selection = site.id
         }
@@ -100,7 +100,7 @@ if let flag = args.firstIndex(of: "--dump"), args.count > flag + 1 {
     }
     var groups = MenuReader.groups(pid: pid)
     if let url {
-        let packs = SitePackStore(directory: SitePackStore.defaultDirectory).load().packs
+        let packs = SitePackStore.app.load().packs
         groups = SiteMatcher.packs(for: url, in: packs).flatMap { $0.displayGroups() } + groups
     }
     for group in groups {

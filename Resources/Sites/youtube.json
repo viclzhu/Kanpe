@@ -4,30 +4,32 @@
   "match": ["youtube.com", "m.youtube.com"],
   "groups": [
     {
+      "id": "playback",
       "title": "Playback",
       "shortcuts": [
-        { "title": "Play / pause", "keys": "k", "level": "core" },
-        { "title": "Back 10 seconds", "keys": "j", "level": "core" },
-        { "title": "Forward 10 seconds", "keys": "l", "level": "core" },
-        { "title": "Mute", "keys": "m", "level": "core" },
-        { "title": "Back / forward 5 seconds", "keys": "left or right", "level": "extended" },
-        { "title": "Volume up / down", "keys": "up or down", "level": "extended" },
-        { "title": "Next video", "keys": "shift+n", "level": "extended" },
-        { "title": "Previous video (playlist)", "keys": "shift+p", "level": "extended" },
-        { "title": "Seek to 0–90%", "keys": "0-9", "level": "complete" },
-        { "title": "Previous / next frame (paused)", "keys": ", or .", "level": "complete" },
-        { "title": "Slower / faster", "keys": "< or >", "level": "complete" }
+        { "id": "playback.play-pause", "title": "Play / pause", "keys": "k", "level": "core" },
+        { "id": "playback.back-10-seconds", "title": "Back 10 seconds", "keys": "j", "level": "core" },
+        { "id": "playback.forward-10-seconds", "title": "Forward 10 seconds", "keys": "l", "level": "core" },
+        { "id": "playback.mute", "title": "Mute", "keys": "m", "level": "core" },
+        { "id": "playback.back-forward-5-seconds", "title": "Back / forward 5 seconds", "keys": "left or right", "level": "extended" },
+        { "id": "playback.volume-up-down", "title": "Volume up / down", "keys": "up or down", "level": "extended" },
+        { "id": "playback.next-video", "title": "Next video", "keys": "shift+n", "level": "extended" },
+        { "id": "playback.previous-video-playlist", "title": "Previous video (playlist)", "keys": "shift+p", "level": "extended" },
+        { "id": "playback.seek-to-0-90", "title": "Seek to 0–90%", "keys": "0-9", "level": "complete" },
+        { "id": "playback.previous-next-frame-paused", "title": "Previous / next frame (paused)", "keys": ", or .", "level": "complete" },
+        { "id": "playback.slower-faster", "title": "Slower / faster", "keys": "< or >", "level": "complete" }
       ]
     },
     {
+      "id": "view",
       "title": "View",
       "shortcuts": [
-        { "title": "Full screen", "keys": "f", "level": "core" },
-        { "title": "Captions on / off", "keys": "c", "level": "core" },
-        { "title": "Theater mode", "keys": "t", "level": "extended" },
-        { "title": "Miniplayer", "keys": "i", "level": "extended" },
-        { "title": "Search", "keys": "/", "level": "extended" },
-        { "title": "Show keyboard shortcuts", "keys": "?", "level": "complete" }
+        { "id": "view.full-screen", "title": "Full screen", "keys": "f", "level": "core" },
+        { "id": "view.captions-on-off", "title": "Captions on / off", "keys": "c", "level": "core" },
+        { "id": "view.theater-mode", "title": "Theater mode", "keys": "t", "level": "extended" },
+        { "id": "view.miniplayer", "title": "Miniplayer", "keys": "i", "level": "extended" },
+        { "id": "view.search", "title": "Search", "keys": "/", "level": "extended" },
+        { "id": "view.show-keyboard-shortcuts", "title": "Show keyboard shortcuts", "keys": "?", "level": "complete" }
       ]
     }
   ]

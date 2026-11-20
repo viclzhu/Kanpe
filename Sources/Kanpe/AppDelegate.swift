@@ -5,14 +5,13 @@ import KanpeCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor: ActivationMonitor
     private let panel = PanelController()
-    private let store = SitePackStore(directory: SitePackStore.defaultDirectory)
+    private let store = SitePackStore.app
     private var packs: [SitePack] = []
     /// When each pack's shortcuts were last updated, by pack name (shown on hover in the panel).
     private var packDates: [String: Date] = [:]
     private var statusItem: NSStatusItem!
     private var trustTimer: Timer?
-    private var bundledSites: URL? { Bundle.main.resourceURL?.appendingPathComponent("Sites") }
-    private lazy var editor = EditorWindowController(store: store, bundledDirectory: bundledSites) { [weak self] in
+    private lazy var editor = EditorWindowController(store: store) { [weak self] in
         self?.reloadPacks()
         self?.rebuildMenu()
     }
@@ -228,7 +227,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reloadPacks(installDefaults: Bool = false) {
         if installDefaults {
-            try? store.installDefaults(from: bundledSites)
+            do {
+                let converted = try store.migrateLegacyCopies(legacyDirectory: SitePackStore.legacyDirectory)
+                if !converted.isEmpty {
+                    Log.app.info("converted edited copies to overrides: \(converted.joined(separator: ", "), privacy: .public)")
+                }
+            } catch {
+                Log.app.error("migrating site packs failed: \(String(describing: error), privacy: .public)")
+            }
         }
         let result = store.load()
         packs = result.packs

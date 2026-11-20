@@ -9,26 +9,37 @@ final class EditorModel: ObservableObject {
     @Published var selection: EditableSite.ID?
     @Published var unreadableFiles: [String] = []
     @Published var saveError: String?
+    /// Built-in sites the user has changed.
+    @Published private(set) var customized: Set<EditableSite.ID> = []
+    /// Built-in sites with changes that no longer apply to the current built-in pack.
+    @Published private(set) var unapplied: [EditableSite.ID: [String]] = [:]
 
     let store: SitePackStore
-    let bundledDirectory: URL?
     /// Called after anything is written, so the panel picks up changes immediately.
     var onChange: () -> Void = {}
 
     private var pendingSaves: [EditableSite.ID: DispatchWorkItem] = [:]
 
-    init(store: SitePackStore, bundledDirectory: URL?) {
+    init(store: SitePackStore) {
         self.store = store
-        self.bundledDirectory = bundledDirectory
         reload()
     }
 
     func reload() {
         flushSaves()
         let result = store.load()
+        var customized: Set<EditableSite.ID> = []
+        var unapplied: [EditableSite.ID: [String]] = [:]
         sites = result.loaded
-            .map { EditableSite($0.pack, fileURL: $0.fileURL) }
+            .map { loaded in
+                let site = EditableSite(loaded.pack, fileURL: loaded.fileURL)
+                if loaded.isCustomized { customized.insert(site.id) }
+                if !loaded.unapplied.isEmpty { unapplied[site.id] = loaded.unapplied }
+                return site
+            }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        self.customized = customized
+        self.unapplied = unapplied
         unreadableFiles = result.errors.map(\.file)
         if selection == nil || !sites.contains(where: { $0.id == selection }) {
             selection = sites.first?.id
@@ -84,30 +95,40 @@ final class EditorModel: ObservableObject {
     }
 
     func isBuiltIn(_ site: EditableSite) -> Bool {
-        site.fileURL.flatMap { store.bundledPackURL(for: $0, in: bundledDirectory) } != nil
+        site.fileURL.map(store.isBuiltIn) ?? false
+    }
+
+    /// The file to reveal in Finder: the user's changes for a built-in site (nil if there are none).
+    func fileToReveal(_ site: EditableSite) -> URL? {
+        guard let url = site.fileURL else { return nil }
+        guard store.isBuiltIn(url) else { return url }
+        let edits = store.editsURL(for: url)
+        return FileManager.default.fileExists(atPath: edits.path) ? edits : nil
     }
 
     func revertToBuiltIn(_ id: EditableSite.ID) {
         guard let index = sites.firstIndex(where: { $0.id == id }), let url = sites[index].fileURL else { return }
         pendingSaves.removeValue(forKey: id)?.cancel()
         do {
-            try store.revertToBundled(url, from: bundledDirectory)
+            try store.revertToBuiltIn(url)
             if let pack = store.load().loaded.first(where: { $0.fileURL == url })?.pack {
                 var fresh = EditableSite(pack, fileURL: url)
                 fresh.id = id
                 sites[index] = fresh
             }
+            customized.remove(id)
+            unapplied[id] = nil
             onChange()
         } catch {
             saveError = error.localizedDescription
         }
     }
 
-    var hasDeletedBuiltIns: Bool { !store.missingBundledPacks(in: bundledDirectory).isEmpty }
+    var hasDeletedBuiltIns: Bool { !store.deletedBuiltIns().isEmpty }
 
     func restoreBuiltIns() {
         do {
-            try store.restoreMissingBundledPacks(from: bundledDirectory)
+            try store.restoreDeletedBuiltIns()
             reload()
             onChange()
         } catch {
@@ -132,6 +153,11 @@ final class EditorModel: ObservableObject {
         do {
             try store.save(site.pack, to: url)
             sites[index].fileURL = url
+            if store.isBuiltIn(url) {
+                // Saving rewrites the changes from scratch, so ones that no longer applied are gone.
+                unapplied[id] = nil
+                if (try? store.readOverrides(for: url))??.isEmpty == false { customized.insert(id) } else { customized.remove(id) }
+            }
             saveError = nil
             onChange()
         } catch {

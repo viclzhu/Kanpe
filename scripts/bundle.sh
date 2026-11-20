@@ -20,6 +20,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Kanpe"
 cp -R Resources/Sites "$APP/Contents/Resources/Sites"
+cp -R Resources/LegacySites "$APP/Contents/Resources/LegacySites" # for migrating edited copies from 0.2.1 and earlier
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns" # from scripts/make-icon.swift
 
 cat > "$APP/Contents/Info.plist" <<PLIST

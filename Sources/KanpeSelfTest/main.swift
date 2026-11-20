@@ -171,30 +171,192 @@ check(flat.availableLevels, [], "untagged pack has no level choice")
 check(flat.displayGroups(level: .core).flatMap(\.shortcuts).count, 1, "untagged pack shows everything at Core")
 check(DetailLevel.core < DetailLevel.extended && DetailLevel.extended < DetailLevel.complete, true, "level order")
 
-// MARK: Installing bundled packs never clobbers user edits
+// MARK: Overrides: the user's changes to a built-in pack, merged with updates to it
+do {
+    func pack(_ json: String) -> SitePack { try! JSONDecoder().decode(SitePack.self, from: Data(json.utf8)) }
+    let base = pack("""
+    { "name": "Hub", "updated": "2026-11-01", "match": ["hub.test"],
+      "pages": [ { "id": "repo", "name": "Repo", "paths": ["/*/*/**"] },
+                 { "id": "issues", "name": "Issues", "paths": ["/*/*/issues"] } ],
+      "groups": [
+        { "id": "site", "title": "Site", "shortcuts": [
+            { "id": "site.search", "title": "Search", "keys": "/" },
+            { "id": "site.palette", "title": "Palette", "keys": "cmd+k" },
+            { "id": "site.help", "title": "Help", "keys": "?" } ] },
+        { "id": "repo", "title": "Repo", "level": "extended", "pages": ["Repo"], "shortcuts": [
+            { "id": "repo.code", "title": "Code", "keys": "g c" },
+            { "id": "repo.issues", "title": "Issues", "keys": "g i" } ] },
+        { "id": "issues", "title": "Issues", "pages": ["Issues"], "shortcuts": [
+            { "id": "issues.label", "title": "Label", "keys": "l" } ] } ] }
+    """)
+
+    check(SiteOverrides.diff(base: base, edited: base).isEmpty, true, "no edits: nothing stored")
+    check(SiteOverrides().apply(to: base).pack.withoutIDs, base.withoutIDs, "no overrides: the built-in pack")
+
+    // Edit the way the editor does: through EditableSite.
+    var site = EditableSite(base, fileURL: nil)
+    site.updated = "2026-11-19"
+    site.match.append("www.hub.test")
+    site.groups[0].shortcuts[0].keys = "s"                                   // change keys
+    site.groups[0].shortcuts.remove(at: 1)                                   // delete Palette
+    site.groups[1].shortcuts.insert(.init(title: "Wiki", keys: "g w"), at: 1) // add after Code
+    site.groups[1].setLevel(.core, forShortcutAt: 2)                         // Issues: extended → core
+    let label = site.groups[2].shortcuts.removeFirst()
+    site.groups[0].shortcuts.append(label)                                   // move Label to Site
+    site.pages[1].name = "Issue list"                                        // rename a page
+    site.groups.insert(site.groups.remove(at: 2), at: 0)                     // Issues group first
+    site.groups.append(.init(title: "Mine", shortcuts: [.init(title: "Mine 1", keys: "m")]))
+    let edited = site.pack
+
+    let overrides = SiteOverrides.diff(base: base, edited: edited)
+    check(overrides.shortcuts?["site.search"], { var c = SiteOverrides.ShortcutChange(); c.keys = "s"; return c }(),
+          "only the changed field is stored")
+    check(overrides.shortcuts?["site.palette"]?.deleted, true, "deletion stored")
+    check(overrides.shortcuts?["repo.issues"]?.level, .core, "level stored")
+    check(overrides.shortcuts?["issues.label"]?.group, "site", "move to another group stored")
+    check(overrides.shortcuts?["repo.code"], nil, "untouched shortcut not stored")
+    check(overrides.groups?["site"], nil, "group whose shortcuts changed isn't itself stored")
+    check(overrides.pages?["issues"]?.name, "Issue list", "page rename stored")
+    check(overrides.match, ["hub.test", "www.hub.test"], "domains stored")
+    check(overrides.groups?.values.filter { $0.after != nil || $0.first == true }.count, 2,
+          "reordering stores only the moved group and the added one")
+
+    let applied = overrides.apply(to: base)
+    check(applied.pack.withoutIDs, { var e = edited.withoutIDs; e.updated = "2026-11-19"; return e }(),
+          "apply(diff) gives back the edited pack")
+    check(applied.unapplied, [], "everything applies to the pack it was made from")
+    check(applied.pack.groups.first { $0.title == "Issues" }?.pages, ["Issue list"], "group follows renamed page")
+    let reloaded = EditableSite(applied.pack, fileURL: nil).pack
+    check(SiteOverrides.diff(base: base, edited: reloaded), overrides, "saving again without edits stores the same")
+
+    let json = try! JSONEncoder().encode(overrides)
+    check(try! JSONDecoder().decode(SiteOverrides.self, from: json), overrides, "overrides round-trip through JSON")
+    var inherit = EditableSite(base, fileURL: nil)
+    inherit.groups[1].level = nil
+    check(SiteOverrides.diff(base: base, edited: inherit.pack).groups?["repo"]?.level, .inherit, "clearing a level is stored as inherit")
+    check(SiteOverrides.diff(base: base, edited: inherit.pack).apply(to: base).pack.groups[1].level, nil, "inherit clears it")
+
+    // A new built-in version arrives: the user's changes are re-applied on top of it.
+    var upstream = base
+    upstream.updated = "2026-12-01"
+    upstream.groups[0].shortcuts[0].title = "Focus search"                   // the user changed its keys, not its title
+    upstream.groups[1].shortcuts[0].keys = "g shift+c"                       // untouched by the user
+    upstream.groups[0].shortcuts.append(.init(id: "site.dash", title: "Dashboard", keys: "g d"))
+    upstream.groups[1].shortcuts.removeAll { $0.id == "repo.issues" }        // the user changed its level
+    let merged = overrides.apply(to: upstream)
+    let m = merged.pack
+    func sc(_ id: String) -> SitePack.Entry? { m.groups.flatMap(\.shortcuts).first { $0.id == id } }
+    check(sc("site.search").map { [$0.title, $0.keys] }, ["Focus search", "s"], "built-in title change + user keys change")
+    check(sc("repo.code")?.keys, "g shift+c", "built-in change to an untouched shortcut arrives")
+    check(sc("site.dash") != nil, true, "built-in addition arrives")
+    check(sc("site.palette"), nil, "user deletion stays deleted")
+    check(m.groups.first { $0.id == "repo" }?.shortcuts.map(\.title), ["Code", "Wiki"], "user addition kept in place")
+    check(m.groups.first { $0.id == "site" }?.shortcuts.map(\.title), ["Focus search", "Help", "Label", "Dashboard"],
+          "moved shortcut keeps its place; built-in addition lands at the end")
+    check(m.groups.map(\.title), ["Issues", "Site", "Repo", "Mine"], "group order kept")
+    check(m.updated, "2026-12-01", "later of the two dates")
+    check(merged.unapplied, ["shortcut repo.issues"], "change to a shortcut the built-in pack removed is reported")
+}
+
+// MARK: Store: built-in packs, the user's changes, and their own packs
 do {
     let fm = FileManager.default
-    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-selftest-\(UUID().uuidString)")
+    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-store-\(UUID().uuidString)")
     let bundled = root.appendingPathComponent("bundled"), user = root.appendingPathComponent("user")
     try! fm.createDirectory(at: bundled, withIntermediateDirectories: true)
     defer { try? fm.removeItem(at: root) }
-    let store = SitePackStore(directory: user)
-    func write(_ text: String, _ dir: URL, _ name: String) { try! Data(text.utf8).write(to: dir.appendingPathComponent(name)) }
-    func read(_ name: String) -> String { String(decoding: try! Data(contentsOf: user.appendingPathComponent(name)), as: UTF8.self) }
+    var demoWithIDs = demo
+    for g in demoWithIDs.groups.indices {
+        demoWithIDs.groups[g].id = "g\(g)"
+        for s in demoWithIDs.groups[g].shortcuts.indices { demoWithIDs.groups[g].shortcuts[s].id = "g\(g).s\(s)" }
+    }
+    try! SitePackStore.encode(demoWithIDs).write(to: bundled.appendingPathComponent("demo.json"))
+    let store = SitePackStore(directory: user, bundledDirectory: bundled)
+    func only() -> SitePackStore.LoadedPack? { let l = store.load(); return l.loaded.count == 1 ? l.loaded[0] : nil }
 
-    write("v1", bundled, "a.json"); write("v1", bundled, "b.json")
-    try! store.installDefaults(from: bundled)
-    check(read("a.json"), "v1", "fresh install copies")
+    let first = store.load()
+    check(first.errors.count, 0, "loads: \(first.errors)")
+    check(first.loaded.map(\.isBuiltIn), [true], "built-in pack read from the app")
+    check(first.loaded.first?.isCustomized, false, "not customized")
+    let url = first.loaded[0].fileURL
+    check(store.isBuiltIn(url), true, "url identifies a built-in pack")
 
-    write("user edit", user, "b.json")          // user edits b
-    write("v2", bundled, "a.json"); write("v2", bundled, "b.json")  // app update ships v2
-    try! store.installDefaults(from: bundled)
-    check(read("a.json"), "v2", "unedited pack is updated")
-    check(read("b.json"), "user edit", "edited pack is kept")
+    var edited = EditableSite(first.loaded[0].pack, fileURL: url)
+    edited.name = "Demo (mine)"
+    try! store.save(edited.pack, to: url)
+    check(fm.fileExists(atPath: user.appendingPathComponent("demo.edits.json").path), true, "changes saved as edits file")
+    check(fm.fileExists(atPath: user.appendingPathComponent("demo.json").path), false, "no full copy written")
+    check(only()?.pack.name, "Demo (mine)", "changes applied on load")
+    check(only()?.isCustomized, true, "customized")
 
-    write("legacy", user, "c.json"); write("v1", bundled, "c.json")  // pre-existing file, no manifest entry
-    try! store.installDefaults(from: bundled)
-    check(read("c.json"), "legacy", "unknown pre-existing file is kept")
+    edited.name = "Demo"
+    try! store.save(edited.pack, to: url)
+    check(fm.fileExists(atPath: user.appendingPathComponent("demo.edits.json").path), false, "undoing every change removes the file")
+
+    edited.name = "Demo (mine)"
+    try! store.save(edited.pack, to: url)
+    try! store.delete(url)
+    check(store.load().loaded.count, 0, "deleted built-in is hidden")
+    check(store.deletedBuiltIns().count, 1, "and restorable")
+    check(try! store.restoreDeletedBuiltIns(), 1, "restore count")
+    check(only()?.pack.name, "Demo (mine)", "restored with the user's changes")
+    try! store.revertToBuiltIn(url)
+    check(only()?.pack.name, "Demo", "revert drops the changes")
+
+    // A user pack with the same file name replaces the built-in one.
+    var mine = demo
+    mine.name = "My Demo"
+    try! store.save(mine, to: user.appendingPathComponent("demo.json"))
+    check(only().map { [$0.pack.name, "\($0.isBuiltIn)"] }, ["My Demo", "false"], "user pack replaces built-in of the same name")
+    try! fm.removeItem(at: user.appendingPathComponent("demo.json"))
+
+    check(store.newFileURL(forName: "My Site!").lastPathComponent, "my-site.json", "slug")
+    check(store.newFileURL(forName: "Demo").lastPathComponent, "demo-2.json", "new pack doesn't take a built-in pack's name")
+    check(store.newFileURL(forName: "!!!").lastPathComponent, "site.json", "fallback name")
+}
+
+// MARK: Migrating full copies from 0.2.1 and earlier
+do {
+    let fm = FileManager.default
+    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-migrate-\(UUID().uuidString)")
+    let bundled = root.appendingPathComponent("bundled"), user = root.appendingPathComponent("user"),
+        legacy = root.appendingPathComponent("legacy")
+    for dir in [bundled, user, legacy] { try! fm.createDirectory(at: dir, withIntermediateDirectories: true) }
+    defer { try? fm.removeItem(at: root) }
+    func data(_ s: String) -> Data { Data(s.utf8) }
+
+    // v1 shipped without ids; the user edited their copy; v2 (with ids) changed other things.
+    let v1 = #"{"name":"Demo","match":["d.test"],"groups":[{"title":"G","shortcuts":[{"title":"One","keys":"1"},{"title":"Two","keys":"2"}]}]}"#
+    let v2 = #"{"name":"Demo","updated":"2026-12-01","match":["d.test"],"groups":[{"id":"g","title":"G","shortcuts":[{"id":"g.one","title":"One","keys":"1"},{"id":"g.two","title":"Two","keys":"shift+2"},{"id":"g.three","title":"Three","keys":"3"}]}]}"#
+    let userCopy = #"{"name":"Demo","match":["d.test"],"groups":[{"title":"G","shortcuts":[{"title":"One","keys":"cmd+1"},{"title":"Two","keys":"2"},{"title":"Mine","keys":"m"}]}]}"#
+    let other = #"{"name":"Other","match":["o.test"],"groups":[{"id":"g","title":"G","shortcuts":[{"id":"g.x","title":"X","keys":"x"}]}]}"#
+    // v0 is even older. The manifest names it, but the user's copy was later updated to v1 by
+    // hand (without the manifest): the closest version, v1, should be used as the starting point.
+    let v0 = #"{"name":"Demo","match":["d.test"],"groups":[{"title":"G","shortcuts":[{"title":"One","keys":"1"}]}]}"#
+    try! data(v0).write(to: legacy.appendingPathComponent("demo-v0.json"))
+    try! data(v1).write(to: legacy.appendingPathComponent("demo-v1.json"))
+    try! data(v2).write(to: bundled.appendingPathComponent("demo.json"))
+    try! data(other).write(to: bundled.appendingPathComponent("other.json"))
+    try! data(other).write(to: bundled.appendingPathComponent("gone.json"))
+    try! data(userCopy).write(to: user.appendingPathComponent("demo.json"))
+    try! data(other).write(to: user.appendingPathComponent("other.json")) // unedited copy
+    let manifest = ["demo.json": SitePackStore.digest(data(v0)), "other.json": SitePackStore.digest(data(other)),
+                    "gone.json": SitePackStore.digest(data(other))]          // gone.json: the user deleted it
+    try! JSONEncoder().encode(manifest).write(to: user.appendingPathComponent(".installed.json"))
+
+    let store = SitePackStore(directory: user, bundledDirectory: bundled)
+    check(try! store.migrateLegacyCopies(legacyDirectory: legacy), ["demo.json"], "edited copy converted")
+    let result = store.load()
+    check(result.errors.count, 0, "loads after migration: \(result.errors)")
+    let demoPack = result.loaded.first { $0.pack.name == "Demo" }
+    check(demoPack?.pack.groups[0].shortcuts.map { "\($0.title)=\($0.keys)" }, ["One=cmd+1", "Two=shift+2", "Mine=m", "Three=3"],
+          "user's edits kept, built-in changes since v1 arrive")
+    check(demoPack?.isBuiltIn, true, "now a built-in pack with changes")
+    check(result.loaded.map(\.pack.name).sorted(), ["Demo", "Other"], "unedited copy replaced by built-in; deleted stays deleted")
+    check(fm.fileExists(atPath: user.appendingPathComponent("Backups/demo.json").path), true, "edited copy backed up")
+    check(fm.fileExists(atPath: user.appendingPathComponent("other.json").path), false, "unedited copy removed")
+    check(fm.fileExists(atPath: user.appendingPathComponent(".installed.json").path), false, "manifest removed")
+    check(try! store.migrateLegacyCopies(legacyDirectory: legacy), [], "runs once")
 }
 
 // MARK: Editing model
@@ -237,48 +399,6 @@ check(KeyRecording.notation(keyCode: 24, characters: "+", modifiers: [.command])
 check(KeyRecording.notation(keyCode: 18, characters: "1", modifiers: [.shift]), "shift+1", "shift kept for digits")
 check(KeyRecording.notation(keyCode: 999, characters: nil, modifiers: []), nil, "unknown key ignored")
 check(KeyNotation.parse(KeyRecording.notation(keyCode: 35, characters: "p", modifiers: [.shift, .command])!), ["⇧⌘P"], "recorded notation renders")
-
-// MARK: Store editing operations
-do {
-    let fm = FileManager.default
-    let root = fm.temporaryDirectory.appendingPathComponent("kanpe-edit-\(UUID().uuidString)")
-    let bundled = root.appendingPathComponent("bundled"), user = root.appendingPathComponent("user")
-    try! fm.createDirectory(at: bundled, withIntermediateDirectories: true)
-    defer { try? fm.removeItem(at: root) }
-    try! SitePackStore.encode(demo).write(to: bundled.appendingPathComponent("demo.json"))
-    let store = SitePackStore(directory: user)
-    try! store.installDefaults(from: bundled)
-
-    let first = store.load()
-    check(first.errors.count, 0, "install manifest is not read as a pack: \(first.errors)")
-    check(first.packs, [demo], "installed pack loads")
-
-    // Edit and save: counts as a user edit, so app updates leave it alone.
-    let url = first.loaded[0].fileURL
-    var edited = EditableSite(demo, fileURL: url)
-    edited.name = "Demo (mine)"
-    try! store.save(edited.pack, to: url)
-    try! store.installDefaults(from: bundled)
-    check(store.load().packs.first?.name, "Demo (mine)", "saved edit survives reinstall")
-
-    // Revert brings back the built-in.
-    check(store.bundledPackURL(for: url, in: bundled) != nil, true, "detected as built-in")
-    try! store.revertToBundled(url, from: bundled)
-    check(store.load().packs.first?.name, "Demo", "revert restores built-in")
-
-    // Delete sticks across launches; restore brings it back.
-    try! store.delete(url)
-    try! store.installDefaults(from: bundled)
-    check(store.load().packs.count, 0, "deleted built-in stays deleted")
-    check(store.missingBundledPacks(in: bundled).count, 1, "deleted built-in is restorable")
-    check(try! store.restoreMissingBundledPacks(from: bundled), 1, "restore count")
-    check(store.load().packs.first?.name, "Demo", "restored")
-
-    // New file names are slugged and unique.
-    check(store.newFileURL(forName: "My Site!").lastPathComponent, "my-site.json", "slug")
-    check(store.newFileURL(forName: "Demo").lastPathComponent, "demo-2.json", "unique name")
-    check(store.newFileURL(forName: "!!!").lastPathComponent, "site.json", "fallback name")
-}
 
 // MARK: Bundled packs parse and render
 let sitesDir = URL(fileURLWithPath: #filePath)
@@ -396,6 +516,22 @@ do {
                                    modified: modified).updatedDate, modified, "no updated: file date")
     for lp in loaded.loaded {
         check(lp.pack.updated.flatMap { PackDate.parse($0) } != nil, true, "\(lp.pack.name) has a valid updated date")
+    }
+    // Every page, group and shortcut has an id, unique per kind (the user's changes refer to them).
+    for pack in loaded.packs {
+        let pageIDs = (pack.pages ?? []).map(\.id), groupIDs = pack.groups.map(\.id)
+        let shortcutIDs = pack.groups.flatMap { $0.shortcuts.map(\.id) }
+        for (kind, ids) in [("page", pageIDs), ("group", groupIDs), ("shortcut", shortcutIDs)] {
+            check(ids.filter { $0 == nil }.count, 0, "\(pack.name): every \(kind) has an id (run scripts/add-pack-ids.py)")
+            check(Set(ids).count, ids.count, "\(pack.name): \(kind) ids are unique")
+        }
+    }
+    // Earlier versions (for migrating edited copies) still decode.
+    let legacyDir = sitesDir.deletingLastPathComponent().appendingPathComponent("LegacySites")
+    let legacyFiles = (try? FileManager.default.contentsOfDirectory(at: legacyDir, includingPropertiesForKeys: nil)) ?? []
+    check(legacyFiles.isEmpty, false, "legacy packs present")
+    for file in legacyFiles {
+        check((try? JSONDecoder().decode(SitePack.self, from: Data(contentsOf: file))) != nil, true, "\(file.lastPathComponent) decodes")
     }
 }
 

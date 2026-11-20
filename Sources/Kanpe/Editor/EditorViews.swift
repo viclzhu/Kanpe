@@ -38,7 +38,7 @@ struct EditorRootView: View {
     private var sidebar: some View {
         List(selection: $model.selection) {
             ForEach(visibleSites) { site in
-                SiteRow(site: site, isBuiltIn: model.isBuiltIn(site))
+                SiteRow(site: site, isBuiltIn: model.isBuiltIn(site), isCustomized: model.customized.contains(site.id))
                     .tag(site.id)
                     .contextMenu { siteActions(site.id) }
             }
@@ -85,9 +85,12 @@ struct EditorRootView: View {
         Button("Duplicate") { model.duplicate(id) }
         if let site = model.binding(for: id), model.isBuiltIn(site) {
             Button("Revert to Built-in") { model.revertToBuiltIn(id) }
+                .disabled(!model.customized.contains(id))
         }
-        if let url = model.binding(for: id)?.fileURL {
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+        if let site = model.binding(for: id), let url = model.fileToReveal(site) {
+            Button(model.isBuiltIn(site) ? "Show Changes in Finder" : "Show in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
         }
         Divider()
         Button("Delete…", role: .destructive) { pendingDelete = id }
@@ -101,6 +104,8 @@ struct EditorRootView: View {
             SiteEditor(
                 site: Binding(get: { model.binding(for: id) ?? .blank() }, set: { model.update($0) }),
                 saveError: model.saveError,
+                status: status(of: id),
+                unapplied: model.unapplied[id]?.count ?? 0,
                 actions: { siteActions(id) }
             )
             .id(id) // fresh view state (focus, recorders) per site
@@ -120,6 +125,11 @@ struct EditorRootView: View {
         }
     }
 
+    private func status(of id: EditableSite.ID) -> String? {
+        guard let site = model.binding(for: id), model.isBuiltIn(site) else { return nil }
+        return model.customized.contains(id) ? "Built-in, with your changes" : "Built-in"
+    }
+
     private var deleteTitle: String {
         let name = pendingDelete.flatMap(model.binding(for:))?.name ?? "this site"
         return "Delete \u{201C}\(name)\u{201D}?"
@@ -136,6 +146,7 @@ struct EditorRootView: View {
 private struct SiteRow: View {
     let site: EditableSite
     let isBuiltIn: Bool
+    let isCustomized: Bool
 
     var body: some View {
         HStack(spacing: 10) {
@@ -145,8 +156,16 @@ private struct SiteRow: View {
                 .frame(width: 26, height: 26)
                 .background(Self.color(for: site.name).gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
-                Text(site.name.isEmpty ? "Untitled" : site.name)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(site.name.isEmpty ? "Untitled" : site.name)
+                        .lineLimit(1)
+                    if isCustomized {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .help("You've changed this built-in site")
+                    }
+                }
                 Text(site.match.isEmpty ? "No domains" : site.match.joined(separator: ", "))
                     .font(.caption)
                     .foregroundStyle(site.match.isEmpty ? .orange : .secondary)
@@ -169,6 +188,10 @@ private struct SiteRow: View {
 private struct SiteEditor<Actions: View>: View {
     @Binding var site: EditableSite
     let saveError: String?
+    /// "Built-in" or "Built-in, with your changes"; nil for the user's own sites.
+    let status: String?
+    /// How many of the user's changes no longer apply to the built-in site.
+    let unapplied: Int
     @ViewBuilder let actions: () -> Actions
     @FocusState private var focus: UUID?
 
@@ -237,8 +260,8 @@ private struct SiteEditor<Actions: View>: View {
                     .help("More")
             }
 
-            if let updated = site.updated, let date = PackDate.parse(updated) {
-                Text("Updated \(date.formatted(date: .abbreviated, time: .omitted)) (\(PackDate.age(of: date)))")
+            if let caption {
+                Text(caption)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, -10)
@@ -250,13 +273,27 @@ private struct SiteEditor<Actions: View>: View {
 
             LevelSummary(pack: site.pack)
 
-            ForEach(site.issues + (saveError.map { [$0] } ?? []), id: \.self) { issue in
+            ForEach(site.issues + unappliedNote + (saveError.map { [$0] } ?? []), id: \.self) { issue in
                 Label(issue, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
                     .foregroundStyle(.orange)
             }
         }
         .padding(.vertical, 8)
+    }
+
+    /// "Updated Nov 19, 2026 (today) · Built-in, with your changes".
+    private var caption: String? {
+        let updated = site.updated.flatMap { PackDate.parse($0) }
+            .map { "Updated \($0.formatted(date: .abbreviated, time: .omitted)) (\(PackDate.age(of: $0)))" }
+        let parts = [updated, status].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " \u{00B7} ")
+    }
+
+    private var unappliedNote: [String] {
+        guard unapplied > 0 else { return [] }
+        return ["\(unapplied) of your changes no longer apply, because the built-in site no longer has what they changed. "
+                + "They'll be dropped the next time you edit this site."]
     }
 }
 
