@@ -1,6 +1,6 @@
 cask "kanpe" do
-  version "0.2.0"
-  sha256 "1abc1c5e21da2e58640d10b797039cc8f80a4fc71d13c160db5e9874f71d30f1"
+  version "0.2.1"
+  sha256 "6d14549ddfd6a513dbc628d7983c5f8c672301a7cec9ec9b3478d994f03d590b"
 
   url "https://github.com/viclzhu/Kanpe/releases/download/v#{version}/Kanpe-#{version}.zip"
   name "Kanpe"
