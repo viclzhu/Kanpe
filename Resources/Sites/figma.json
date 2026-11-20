@@ -1,0 +1,150 @@
+{
+  "name": "Figma",
+  "match": ["figma.com"],
+  "pages": [
+    { "name": "Design file", "paths": ["/design/**", "/file/**"] },
+    { "name": "FigJam board", "paths": ["/board/**"] },
+    { "name": "Prototype", "paths": ["/proto/**"] }
+  ],
+  "groups": [
+    {
+      "title": "Tools",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Move", "keys": "v", "level": "core" },
+        { "title": "Frame", "keys": "f or a", "level": "core" },
+        { "title": "Rectangle", "keys": "r", "level": "core" },
+        { "title": "Text", "keys": "t", "level": "core" },
+        { "title": "Pen", "keys": "p", "level": "core" },
+        { "title": "Hand (hold)", "keys": "space", "level": "core" },
+        { "title": "Ellipse", "keys": "o", "level": "extended" },
+        { "title": "Line", "keys": "l", "level": "extended" },
+        { "title": "Arrow", "keys": "shift+l", "level": "extended" },
+        { "title": "Comment", "keys": "c", "level": "extended" },
+        { "title": "Section", "keys": "shift+s", "level": "extended" },
+        { "title": "Pencil", "keys": "shift+p", "level": "complete" },
+        { "title": "Hand", "keys": "h", "level": "complete" },
+        { "title": "Scale", "keys": "k", "level": "complete" },
+        { "title": "Slice", "keys": "s", "level": "complete" },
+        { "title": "Place image", "keys": "shift+cmd+k", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Layers",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Group", "keys": "cmd+g", "level": "core" },
+        { "title": "Ungroup", "keys": "shift+cmd+g", "level": "core" },
+        { "title": "Add auto layout", "keys": "shift+a", "level": "core" },
+        { "title": "Frame selection", "keys": "alt+cmd+g", "level": "extended" },
+        { "title": "Create component", "keys": "alt+cmd+k", "level": "extended" },
+        { "title": "Rename", "keys": "cmd+r", "level": "extended" },
+        { "title": "Show / hide", "keys": "shift+cmd+h", "level": "extended" },
+        { "title": "Lock / unlock", "keys": "shift+cmd+l", "level": "extended" },
+        { "title": "Forward / backward", "keys": "cmd+] or cmd+[", "level": "extended" },
+        { "title": "To front / to back", "keys": "alt+cmd+] or alt+cmd+[", "level": "complete" },
+        { "title": "Remove auto layout", "keys": "alt+shift+a", "level": "complete" },
+        { "title": "Detach instance", "keys": "alt+cmd+b", "level": "complete" },
+        { "title": "Use as mask", "keys": "ctrl+cmd+m", "level": "complete" },
+        { "title": "Flatten", "keys": "cmd+e", "level": "complete" },
+        { "title": "Outline stroke", "keys": "alt+cmd+o", "level": "complete" },
+        { "title": "Flip horizontal / vertical", "keys": "shift+h or shift+v", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Selection",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Select children", "keys": "enter", "level": "extended" },
+        { "title": "Select parent", "keys": "shift+enter", "level": "extended" },
+        { "title": "Next / previous sibling", "keys": "tab or shift+tab", "level": "extended" },
+        { "title": "Select inverse", "keys": "shift+cmd+a", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Edit",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Duplicate", "keys": "cmd+d", "level": "core" },
+        { "title": "Paste over selection", "keys": "shift+cmd+v", "level": "extended" },
+        { "title": "Copy / paste props", "keys": "alt+cmd+c or alt+cmd+v", "level": "extended" },
+        { "title": "Copy as PNG", "keys": "shift+cmd+c", "level": "complete" },
+        { "title": "Export", "keys": "shift+cmd+e", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Align",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Align left / right", "keys": "alt+a or alt+d", "level": "extended" },
+        { "title": "Align top / bottom", "keys": "alt+w or alt+s", "level": "extended" },
+        { "title": "Center horiz. / vert.", "keys": "alt+h or alt+v", "level": "extended" },
+        { "title": "Tidy up", "keys": "ctrl+alt+t", "level": "complete" },
+        { "title": "Distribute H / V", "keys": "ctrl+alt+h or ctrl+alt+v", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Text",
+      "pages": ["Design file"],
+      "level": "complete",
+      "shortcuts": [
+        { "title": "Bold / italic / under.", "keys": "cmd+b or cmd+i or cmd+u" },
+        { "title": "Strikethrough", "keys": "shift+cmd+x" },
+        { "title": "Text L / C / R", "keys": "alt+cmd+l or alt+cmd+t or alt+cmd+r" },
+        { "title": "Font size up / down", "keys": "shift+cmd+> or shift+cmd+<" },
+        { "title": "Bullets / numbers", "keys": "shift+cmd+8 or shift+cmd+7" }
+      ]
+    },
+    {
+      "title": "FigJam tools",
+      "pages": ["FigJam board"],
+      "shortcuts": [
+        { "title": "Move", "keys": "v", "level": "core" },
+        { "title": "Sticky note", "keys": "s", "level": "core" },
+        { "title": "Text", "keys": "t", "level": "core" },
+        { "title": "Marker", "keys": "m", "level": "core" },
+        { "title": "Connector", "keys": "x", "level": "core" },
+        { "title": "Rectangle / ellipse", "keys": "r or o", "level": "extended" },
+        { "title": "Section", "keys": "shift+s", "level": "extended" },
+        { "title": "Highlighter", "keys": "shift+m", "level": "extended" },
+        { "title": "Comment", "keys": "c", "level": "extended" },
+        { "title": "Hand", "keys": "h", "level": "complete" },
+        { "title": "Stamp", "keys": "e", "level": "complete" },
+        { "title": "Eraser", "keys": "shift+backspace", "level": "complete" }
+      ]
+    },
+    {
+      "title": "View",
+      "pages": ["Design file", "FigJam board"],
+      "shortcuts": [
+        { "title": "Zoom in / out", "keys": "+ or -", "level": "core" },
+        { "title": "Zoom to fit", "keys": "shift+1", "level": "core" },
+        { "title": "Zoom to selection", "keys": "shift+2", "level": "core" },
+        { "title": "Zoom to 100%", "keys": "shift+0", "level": "extended" },
+        { "title": "Show / hide UI", "keys": "cmd+\\", "level": "extended" },
+        { "title": "Quick actions", "keys": "cmd+k or cmd+/", "level": "core" },
+        { "title": "Find", "keys": "cmd+f", "level": "extended" },
+        { "title": "Rulers", "keys": "shift+r", "level": "complete" },
+        { "title": "Outlines", "keys": "cmd+y", "level": "complete" },
+        { "title": "Layout grids", "keys": "ctrl+g", "level": "complete" },
+        { "title": "Multiplayer cursors", "keys": "alt+cmd+\\", "level": "complete" },
+        { "title": "Show keyboard shortcuts", "keys": "ctrl+shift+?", "level": "complete" }
+      ]
+    },
+    {
+      "title": "Prototype",
+      "pages": ["Design file"],
+      "shortcuts": [
+        { "title": "Present", "keys": "alt+cmd+enter", "level": "extended" }
+      ]
+    },
+    {
+      "title": "Presenting",
+      "pages": ["Prototype"],
+      "shortcuts": [
+        { "title": "Next / previous frame", "keys": "right or left", "level": "core" },
+        { "title": "Restart", "keys": "r", "level": "extended" }
+      ]
+    }
+  ]
+}

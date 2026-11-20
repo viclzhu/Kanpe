@@ -296,6 +296,7 @@ for pack in loaded.packs {
     }
 }
 check(SiteMatcher.packs(for: gh, in: loaded.packs).map(\.name), ["GitHub"], "GitHub pack matches github.com")
+check(SiteMatcher.packs(for: URL(string: "https://www.figma.com/design/abc/Untitled")!, in: loaded.packs).map(\.name), ["Figma"], "Figma pack matches figma.com")
 for pack in loaded.packs {
     let counts = DetailLevel.allCases.map(pack.count(at:))
     check(!pack.availableLevels.isEmpty && counts[0] < counts[1] && counts[1] < counts[2], true,

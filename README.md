@@ -6,7 +6,7 @@ The name comes from カンペ (*kanpe*), Japanese TV slang for the cue cards hel
 
 Press `⌘` twice and keep holding (or, if you prefer, just hold `⌘`; choose under menu-bar icon → **Trigger**) and a panel appears with:
 
-1. **Site shortcuts** for the active tab (GitHub, Gmail, YouTube… or any site you add), highlighted at the top.
+1. **Site shortcuts** for the active tab (GitHub, Gmail, YouTube, Figma… or any site you add), highlighted at the top.
 2. **App shortcuts** read live from the frontmost app's menu bar.
 
 In browsers the app's own menu shortcuts (File, Edit, View…) start **hidden**, because they're the same on every site, so the panel shows just the site's shortcuts. Click **Menus** in the panel header to show or hide them; the choice is remembered per app. Other apps show their menu shortcuts by default.
