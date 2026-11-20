@@ -85,10 +85,13 @@ public struct SiteInfo: Hashable, Sendable {
     /// Whether only the current page's shortcuts are shown. `nil` when the pack has no
     /// page-specific groups (nothing to toggle).
     public var pageFiltering: Bool?
+    /// When the pack's shortcuts were last updated, if known.
+    public var updated: Date?
 
     public init(name: String, level: DetailLevel, availableLevels: [DetailLevel],
-                pages: [String] = [], pageFiltering: Bool? = nil) {
+                pages: [String] = [], pageFiltering: Bool? = nil, updated: Date? = nil) {
         self.name = name
+        self.updated = updated
         self.level = level
         self.availableLevels = availableLevels
         self.pages = pages

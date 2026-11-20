@@ -109,6 +109,7 @@ Site packs are JSON files in `~/Library/Application Support/Kanpe/Sites/`. Use t
 ```json
 {
   "name": "GitHub",
+  "updated": "2026-11-11",
   "match": ["github.com"],
   "groups": [
     {
@@ -180,6 +181,8 @@ Path patterns match whole path segments, ignore case, a trailing slash and the q
 A URL can be on several pages at once (a repo's issue is on both **Repository** and **Issue**). List pages from general to specific; the panel header shows the last one that matches.
 
 **Updates to bundled packs:** when a new version of the app includes an updated pack, it replaces your copy only if you haven't edited it. Packs you've edited are never overwritten.
+
+**`updated`** (optional, `YYYY-MM-DD`) is when the pack's shortcuts were last checked or changed. Hover over the site chip in the panel header (`github.com › Code`) to see it, e.g. "GitHub shortcuts updated Nov 11, 2026 (8 days ago)". The editor shows it under the site name and sets it to today whenever you edit the site. Packs without it show the file's modification date.
 
 **`match`** takes hosts. Subdomains also match, so `github.com` matches `gist.github.com`, and a leading `www.` is ignored. You can add a path prefix (`google.com/maps`) or a wildcard (`*.atlassian.net`).
 

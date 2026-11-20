@@ -1,5 +1,6 @@
 {
   "name": "Gmail",
+  "updated": "2026-11-10",
   "match": ["mail.google.com"],
   "groups": [
     {

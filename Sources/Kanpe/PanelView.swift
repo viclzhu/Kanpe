@@ -74,6 +74,16 @@ struct PanelHeader: View {
 
     private var pageName: String? { content.sites.lazy.compactMap(\.pages.last).first }
 
+    /// Hover text for the site chip: when each matched pack's shortcuts were last updated.
+    private var freshness: String {
+        guard !content.sites.isEmpty else { return "No shortcuts for this site yet" }
+        return content.sites.map { site in
+            guard let date = site.updated else { return "\(site.name) shortcuts: update date unknown" }
+            let day = date.formatted(date: .abbreviated, time: .omitted)
+            return "\(site.name) shortcuts updated \(day) (\(PackDate.age(of: date)))"
+        }.joined(separator: "\n")
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             if let icon {
@@ -89,6 +99,8 @@ struct PanelHeader: View {
                     .background(content.sites.isEmpty ? Color.secondary.opacity(0.15) : Color.accentColor.opacity(0.2),
                                 in: Capsule())
                     .foregroundStyle(content.sites.isEmpty ? .secondary : .primary)
+                    .contentShape(Capsule())
+                    .help(freshness)
             }
             Spacer(minLength: 16)
             ForEach(content.sites.filter { !$0.availableLevels.isEmpty || $0.pageFiltering != nil }, id: \.name) { site in

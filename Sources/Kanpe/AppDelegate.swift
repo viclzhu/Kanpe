@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let panel = PanelController()
     private let store = SitePackStore(directory: SitePackStore.defaultDirectory)
     private var packs: [SitePack] = []
+    /// When each pack's shortcuts were last updated, by pack name (shown on hover in the panel).
+    private var packDates: [String: Date] = [:]
     private var statusItem: NSStatusItem!
     private var trustTimer: Timer?
     private var bundledSites: URL? { Bundle.main.resourceURL?.appendingPathComponent("Sites") }
@@ -138,7 +140,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sites = matched.map { pack in
             SiteInfo(name: pack.name, level: level(forSite: pack.name), availableLevels: pack.availableLevels,
                      pages: shown.url.map(pack.pages(for:)) ?? [],
-                     pageFiltering: pack.hasPageSpecificGroups ? filtersPages(forSite: pack.name) : nil)
+                     pageFiltering: pack.hasPageSpecificGroups ? filtersPages(forSite: pack.name) : nil,
+                     updated: packDates[pack.name])
         }
         let siteGroups = zip(matched, sites).flatMap { pack, site in
             pack.displayGroups(level: site.level, pages: site.pageFiltering == true ? site.pages : nil,
@@ -229,6 +232,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let result = store.load()
         packs = result.packs
+        packDates = Dictionary(result.loaded.compactMap { l in l.updatedDate.map { (l.pack.name, $0) } },
+                               uniquingKeysWith: max)
         if !result.errors.isEmpty {
             let alert = NSAlert()
             alert.messageText = "Some site shortcut files could not be read"

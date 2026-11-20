@@ -93,13 +93,17 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
     /// File backing this site. `nil` until first saved.
     public var fileURL: URL?
     public var name: String
+    /// "YYYY-MM-DD"; the editor sets it to today whenever the site changes.
+    public var updated: String?
     public var match: [String]
     public var pages: [Page]
     public var groups: [Group]
 
-    public init(fileURL: URL? = nil, name: String, match: [String], pages: [Page] = [], groups: [Group]) {
+    public init(fileURL: URL? = nil, name: String, updated: String? = nil, match: [String], pages: [Page] = [],
+                groups: [Group]) {
         self.fileURL = fileURL
         self.name = name
+        self.updated = updated
         self.match = match
         self.pages = pages
         self.groups = groups
@@ -118,6 +122,7 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
         self.init(
             fileURL: fileURL,
             name: pack.name,
+            updated: pack.updated,
             match: pack.match,
             pages: pages,
             groups: pack.groups.map { g in
@@ -152,6 +157,7 @@ public struct EditableSite: Identifiable, Hashable, Sendable {
     public var pack: SitePack {
         SitePack(
             name: name.trimmingCharacters(in: .whitespaces),
+            updated: updated,
             match: match,
             pages: pages.map { SitePack.Page(name: $0.name.trimmingCharacters(in: .whitespaces), paths: $0.paths) },
             groups: groups.map { g in

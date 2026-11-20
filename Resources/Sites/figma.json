@@ -1,5 +1,6 @@
 {
   "name": "Figma",
+  "updated": "2026-11-19",
   "match": ["figma.com"],
   "pages": [
     { "name": "Design file", "paths": ["/design/**", "/file/**"] },

@@ -17,14 +17,15 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     let url = args.count > flag + 3 && !args[flag + 3].hasPrefix("--") ? URL(string: args[flag + 3]) : BrowserURLReader.urlViaAccessibility(pid: pid, bundleID: bundleID)
     // Optional: --level core|extended|complete (default: Core)
     let level = args.firstIndex(of: "--level").flatMap { args.count > $0 + 1 ? DetailLevel(rawValue: args[$0 + 1]) : nil } ?? .default
-    let packs = SitePackStore(directory: SitePackStore.defaultDirectory).load().packs
-    let matched = url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
+    let loaded = SitePackStore(directory: SitePackStore.defaultDirectory).load().loaded
+    let matched = url.map { SiteMatcher.packs(for: $0, in: loaded.map(\.pack)) } ?? []
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
                                host: url.flatMap(SiteMatcher.normalizedHost),
                                sites: matched.map { pack in
                                    SiteInfo(name: pack.name, level: level, availableLevels: pack.availableLevels,
                                             pages: url.map(pack.pages(for:)) ?? [],
-                                            pageFiltering: pack.hasPageSpecificGroups ? !args.contains("--all-pages") : nil)
+                                            pageFiltering: pack.hasPageSpecificGroups ? !args.contains("--all-pages") : nil,
+                                            updated: loaded.first { $0.pack == pack }?.updatedDate)
                                },
                                groups: [], appMenus: nil)
     var renderContent = content

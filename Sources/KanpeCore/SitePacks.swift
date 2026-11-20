@@ -45,6 +45,9 @@ public enum DetailLevel: String, Codable, CaseIterable, Comparable, Sendable {
 ///     "groups": [ { "title": "Issues", "pages": ["Issues"], "shortcuts": [ … ] } ]
 ///
 /// See `PathPattern` for the path syntax.
+///
+/// `updated` (optional, "YYYY-MM-DD") is when the shortcuts were last checked or changed. The
+/// editor sets it to today on every edit. The panel shows it on hover, so stale packs are easy to spot.
 public struct SitePack: Codable, Hashable, Sendable {
     /// A named part of a site, identified by URL path patterns.
     public struct Page: Codable, Hashable, Sendable {
@@ -99,12 +102,15 @@ public struct SitePack: Codable, Hashable, Sendable {
     }
 
     public var name: String
+    /// Day the shortcuts were last updated, "YYYY-MM-DD" (see `PackDate`).
+    public var updated: String?
     public var match: [String]
     public var pages: [Page]?
     public var groups: [Group]
 
-    public init(name: String, match: [String], pages: [Page]? = nil, groups: [Group]) {
+    public init(name: String, updated: String? = nil, match: [String], pages: [Page]? = nil, groups: [Group]) {
         self.name = name
+        self.updated = updated
         self.match = match
         self.pages = pages?.isEmpty == true ? nil : pages
         self.groups = groups
@@ -416,6 +422,17 @@ public struct SitePackStore {
     public struct LoadedPack {
         public var fileURL: URL
         public var pack: SitePack
+        /// The file's modification date, used when the pack has no `updated` date.
+        public var modified: Date?
+
+        public init(fileURL: URL, pack: SitePack, modified: Date? = nil) {
+            self.fileURL = fileURL
+            self.pack = pack
+            self.modified = modified
+        }
+
+        /// When the shortcuts were last updated: the pack's `updated` day, else the file's date.
+        public var updatedDate: Date? { pack.updated.flatMap { PackDate.parse($0) } ?? modified }
     }
 
     public struct LoadResult {
@@ -433,11 +450,50 @@ public struct SitePackStore {
         for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where file.pathExtension == "json" && !file.lastPathComponent.hasPrefix(".") {
             do {
                 let data = try Data(contentsOf: file)
-                loaded.append(LoadedPack(fileURL: file, pack: try decoder.decode(SitePack.self, from: data)))
+                let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+                loaded.append(LoadedPack(fileURL: file, pack: try decoder.decode(SitePack.self, from: data),
+                                         modified: modified))
             } catch {
                 errors.append((file.lastPathComponent, String(describing: error)))
             }
         }
         return LoadResult(loaded: loaded, errors: errors)
+    }
+}
+
+/// The `updated` day of a pack ("YYYY-MM-DD", in the user's time zone) and how to describe it.
+public enum PackDate {
+    private static func formatter(_ calendar: Calendar) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = calendar
+        f.timeZone = calendar.timeZone
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }
+
+    public static func parse(_ text: String, calendar: Calendar = .current) -> Date? {
+        formatter(calendar).date(from: text.trimmingCharacters(in: .whitespaces))
+    }
+
+    public static func string(from date: Date, calendar: Calendar = .current) -> String {
+        formatter(calendar).string(from: date)
+    }
+
+    /// "today", "yesterday", "3 days ago", "2 weeks ago", "5 months ago", "over a year ago".
+    public static func age(of date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
+                                           to: calendar.startOfDay(for: now)).day ?? 0
+        func plural(_ n: Int, _ unit: String) -> String { "\(n) \(unit)\(n == 1 ? "" : "s") ago" }
+        switch days {
+        case ..<1: return "today"
+        case 1: return "yesterday"
+        case 2..<14: return plural(days, "day")
+        case 14..<60: return plural(days / 7, "week")
+        case 60..<365: return plural(days / 30, "month")
+        default:
+            let years = days / 365
+            return years == 1 ? "over a year ago" : "over \(years) years ago"
+        }
     }
 }

@@ -237,6 +237,13 @@ private struct SiteEditor<Actions: View>: View {
                     .help("More")
             }
 
+            if let updated = site.updated, let date = PackDate.parse(updated) {
+                Text("Updated \(date.formatted(date: .abbreviated, time: .omitted)) (\(PackDate.age(of: date)))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, -10)
+            }
+
             DomainsEditor(site: $site)
 
             PagesEditor(site: $site)

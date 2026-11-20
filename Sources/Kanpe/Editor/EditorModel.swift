@@ -42,6 +42,8 @@ final class EditorModel: ObservableObject {
     /// Called by the detail view on every edit.
     func update(_ site: EditableSite) {
         guard let index = sites.firstIndex(where: { $0.id == site.id }), sites[index] != site else { return }
+        var site = site
+        site.updated = PackDate.string(from: Date())
         sites[index] = site
         scheduleSave(site.id)
     }
@@ -50,6 +52,7 @@ final class EditorModel: ObservableObject {
 
     func addSite() {
         var site = EditableSite.blank()
+        site.updated = PackDate.string(from: Date())
         site.fileURL = store.newFileURL(forName: site.name)
         sites.append(site)
         selection = site.id
@@ -60,6 +63,7 @@ final class EditorModel: ObservableObject {
         guard var copy = binding(for: id) else { return }
         copy.id = UUID()
         copy.name += " Copy"
+        copy.updated = PackDate.string(from: Date())
         copy.fileURL = store.newFileURL(forName: copy.name)
         sites.append(copy)
         selection = copy.id

@@ -372,6 +372,33 @@ if let github = loaded.packs.first(where: { $0.name == "GitHub" }) {
     check(on("/"), [], "home")
 }
 
+// MARK: Freshness ("updated" dates)
+do {
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = TimeZone(identifier: "UTC")!
+    let now = PackDate.parse("2026-11-19", calendar: utc)!.addingTimeInterval(15 * 3600)
+    func age(_ day: String) -> String { PackDate.age(of: PackDate.parse(day, calendar: utc)!, now: now, calendar: utc) }
+    check(age("2026-11-19"), "today", "same day")
+    check(age("2026-11-18"), "yesterday", "one day")
+    check(age("2026-11-09"), "10 days ago", "days")
+    check(age("2026-10-29"), "3 weeks ago", "weeks")
+    check(age("2026-06-01"), "5 months ago", "months")
+    check(age("2025-10-01"), "over a year ago", "a year")
+    check(age("2023-01-01"), "over 3 years ago", "years")
+    check(PackDate.parse("not a date"), nil, "bad date rejected")
+    check(PackDate.string(from: PackDate.parse("2026-01-05", calendar: utc)!, calendar: utc), "2026-01-05", "date round-trip")
+    let dated = SitePack(name: "D", updated: "2026-11-01", match: ["d.test"], groups: [])
+    check(EditableSite(dated, fileURL: nil).pack.updated, "2026-11-01", "editor keeps updated")
+    let encoded = String(decoding: try! SitePackStore.encode(dated), as: UTF8.self)
+    check(encoded.contains("\"updated\" : \"2026-11-01\""), true, "updated is saved")
+    let modified = Date(timeIntervalSince1970: 1_000_000)
+    check(SitePackStore.LoadedPack(fileURL: URL(fileURLWithPath: "/x"), pack: SitePack(name: "N", match: [], groups: []),
+                                   modified: modified).updatedDate, modified, "no updated: file date")
+    for lp in loaded.loaded {
+        check(lp.pack.updated.flatMap { PackDate.parse($0) } != nil, true, "\(lp.pack.name) has a valid updated date")
+    }
+}
+
 // MARK: App menu levels
 do {
     func lvl(_ title: String, _ chord: String) -> DetailLevel { MenuLevels.level(of: Shortcut(title: title, chord: chord)) }

@@ -77,6 +77,7 @@ pkill -x Kanpe; scripts/bundle.sh && open build/Kanpe.app
   ```
 
   If the user has edited it, don't overwrite it silently. Back it up, merge their edits into the new version, and tell them.
+- **Freshness date:** when you change a bundled pack, set its `"updated"` to today (`YYYY-MM-DD`). The panel shows it when you hover over the site chip, and the self-test requires a valid date in every bundled pack.
 - **Formatting differences:** the editor saves through `JSONEncoder`, so formatting alone can differ from the bundled file. Compare parsed JSON to find real edits.
 - **Defaults:** shortcuts without a `level` count as Core, and a pack with only one level gets no level picker. A group's `level` applies to its shortcuts, and a shortcut's own `level` overrides it.
 - **Pages:**
