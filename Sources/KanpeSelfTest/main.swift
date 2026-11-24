@@ -417,6 +417,13 @@ for pack in loaded.packs {
 }
 check(SiteMatcher.packs(for: gh, in: loaded.packs).map(\.name), ["GitHub"], "GitHub pack matches github.com")
 check(SiteMatcher.packs(for: URL(string: "https://www.figma.com/design/abc/Untitled")!, in: loaded.packs).map(\.name), ["Figma"], "Figma pack matches figma.com")
+check(SiteMatcher.packs(for: URL(string: "https://calendar.google.com/calendar/u/0/r/week")!, in: loaded.packs).map(\.name), ["Google Calendar"], "Google Calendar pack matches calendar.google.com")
+if let cal = loaded.packs.first(where: { $0.name == "Google Calendar" }) {
+    for path in ["/calendar/u/0/r/eventedit", "/calendar/u/1/r/eventedit/abc123", "/calendar/r/eventedit"] {
+        check((cal.pages ?? []).contains { p in p.paths.contains { PathPattern.matches($0, path: path) } }, true, "Calendar event details page matches \(path)")
+    }
+    check((cal.pages ?? []).contains { p in p.paths.contains { PathPattern.matches($0, path: "/calendar/u/0/r/week") } }, false, "Calendar grid is not the event details page")
+}
 for pack in loaded.packs {
     let counts = DetailLevel.allCases.map(pack.count(at:))
     check(!pack.availableLevels.isEmpty && counts[0] < counts[1] && counts[1] < counts[2], true,

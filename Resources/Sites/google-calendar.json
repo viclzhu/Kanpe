@@ -1,0 +1,81 @@
+{
+  "name": "Google Calendar",
+  "updated": "2026-11-24",
+  "match": ["calendar.google.com"],
+  "pages": [
+    { "id": "event-details", "name": "Event details", "paths": ["/calendar/r/eventedit", "/calendar/r/eventedit/**", "/calendar/u/*/r/eventedit", "/calendar/u/*/r/eventedit/**"] }
+  ],
+  "groups": [
+    {
+      "id": "event-details",
+      "title": "Event details",
+      "pages": ["Event details"],
+      "shortcuts": [
+        { "id": "event-details.save", "title": "Save event", "keys": "cmd+s or cmd+enter", "level": "core" },
+        { "id": "event-details.back-to-calendar", "title": "Back to calendar", "keys": "esc", "level": "core" }
+      ]
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "shortcuts": [
+        { "id": "events.create", "title": "Create event", "keys": "c", "level": "core" },
+        { "id": "events.search", "title": "Search", "keys": "/", "level": "core" },
+        { "id": "events.edit", "title": "Edit event", "keys": "e", "level": "extended" },
+        { "id": "events.delete", "title": "Delete event", "keys": "backspace", "level": "extended" },
+        { "id": "events.undo", "title": "Undo last action", "keys": "z or cmd+z", "level": "extended" },
+        { "id": "events.create-timed", "title": "Create timed event", "keys": "shift+c", "level": "complete" },
+        { "id": "events.create-all-day", "title": "Create all-day event", "keys": "q", "level": "complete" }
+      ]
+    },
+    {
+      "id": "navigate",
+      "title": "Navigate",
+      "shortcuts": [
+        { "id": "navigate.today", "title": "Today", "keys": "t", "level": "core" },
+        { "id": "navigate.next-period", "title": "Next period", "keys": "j or n", "level": "core" },
+        { "id": "navigate.previous-period", "title": "Previous period", "keys": "k or p", "level": "core" },
+        { "id": "navigate.go-to-date", "title": "Go to date", "keys": "g", "level": "extended" },
+        { "id": "navigate.refresh", "title": "Refresh", "keys": "r", "level": "complete" }
+      ]
+    },
+    {
+      "id": "views",
+      "title": "Views",
+      "shortcuts": [
+        { "id": "views.day", "title": "Day", "keys": "d or 1", "level": "core" },
+        { "id": "views.week", "title": "Week", "keys": "w or 2", "level": "core" },
+        { "id": "views.month", "title": "Month", "keys": "m or 3", "level": "core" },
+        { "id": "views.custom", "title": "Custom view", "keys": "x or 4", "level": "extended" },
+        { "id": "views.schedule", "title": "Schedule", "keys": "a or 5", "level": "extended" },
+        { "id": "views.year", "title": "Year", "keys": "y or 6", "level": "extended" }
+      ]
+    },
+    {
+      "id": "application",
+      "title": "Application",
+      "shortcuts": [
+        { "id": "application.show-keyboard-shortcuts", "title": "Show keyboard shortcuts", "keys": "? or cmd+/", "level": "extended" },
+        { "id": "application.settings", "title": "Settings", "keys": "s", "level": "complete" },
+        { "id": "application.print", "title": "Print", "keys": "cmd+p", "level": "complete" },
+        { "id": "application.search-people", "title": "Search for people to meet", "keys": "plus", "level": "complete" },
+        { "id": "application.side-panel", "title": "Jump to side panel", "keys": "cmd+alt+. or cmd+alt+,", "level": "complete" },
+        { "id": "application.person-info", "title": "Show person or group info", "keys": "alt+right", "level": "complete" }
+      ]
+    },
+    {
+      "id": "announce",
+      "title": "Announce (opened event)",
+      "level": "complete",
+      "shortcuts": [
+        { "id": "announce.title", "title": "Event title", "keys": "alt+1" },
+        { "id": "announce.date-time", "title": "Event date and time", "keys": "alt+2" },
+        { "id": "announce.guests", "title": "Event guests", "keys": "alt+3" },
+        { "id": "announce.location", "title": "Event rooms and location", "keys": "alt+4" },
+        { "id": "announce.description", "title": "Event description", "keys": "alt+5" },
+        { "id": "announce.attachments", "title": "Event attachments", "keys": "alt+6" },
+        { "id": "announce.notifications", "title": "Event notifications", "keys": "alt+7" }
+      ]
+    }
+  ]
+}
