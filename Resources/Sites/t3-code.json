@@ -1,0 +1,83 @@
+{
+  "name": "T3 Code",
+  "updated": "2026-11-25",
+  "match": ["app:com.t3tools.t3code"],
+  "groups": [
+    {
+      "id": "side-chat",
+      "title": "Side chat & panels",
+      "shortcuts": [
+        { "id": "side-chat.toggle-right-panel", "title": "Toggle right panel", "keys": "cmd+alt+b", "level": "core" },
+        { "id": "side-chat.new-side-chat", "title": "New side chat (panel open)", "keys": "cmd+t", "level": "core" },
+        { "id": "side-chat.close-side-chat", "title": "Close side chat", "keys": "cmd+w", "level": "core" },
+        { "id": "side-chat.reopen-closed", "title": "Reopen closed", "keys": "shift+cmd+t", "level": "extended" },
+        { "id": "side-chat.toggle-sidebar", "title": "Toggle sidebar", "keys": "cmd+b", "level": "core" },
+        { "id": "side-chat.toggle-thread-panel", "title": "Toggle thread panel", "keys": "shift+cmd+b", "level": "extended" },
+        { "id": "side-chat.toggle-terminal", "title": "Toggle terminal", "keys": "cmd+j", "level": "core" },
+        { "id": "side-chat.toggle-diff", "title": "Toggle diff", "keys": "cmd+d", "level": "extended" },
+        { "id": "side-chat.toggle-preview", "title": "Toggle preview", "keys": "shift+cmd+j", "level": "extended" },
+        { "id": "side-chat.focus-next-previous-area", "title": "Focus next / previous area", "keys": "f6 or shift+f6", "level": "complete" }
+      ]
+    },
+    {
+      "id": "threads",
+      "title": "Threads",
+      "shortcuts": [
+        { "id": "threads.new-chat", "title": "New chat", "keys": "cmd+n", "level": "core" },
+        { "id": "threads.new-local-chat", "title": "New local chat", "keys": "shift+cmd+n", "level": "extended" },
+        { "id": "threads.new-chat-without-project", "title": "New chat without project", "keys": "cmd+alt+n", "level": "complete" },
+        { "id": "threads.previous-next-thread", "title": "Previous / next thread", "keys": "shift+cmd+[ or shift+cmd+]", "level": "extended" },
+        { "id": "threads.jump-to-thread", "title": "Jump to thread 1 … 9", "keys": "cmd+1 or cmd+9", "level": "extended" },
+        { "id": "threads.back-forward", "title": "Back / forward", "keys": "cmd+[ or cmd+]", "level": "extended" },
+        { "id": "threads.find-in-chat", "title": "Find in chat", "keys": "cmd+f", "level": "extended" },
+        { "id": "threads.settle-thread", "title": "Settle thread", "keys": "shift+cmd+s", "level": "complete" },
+        { "id": "threads.pin-thread", "title": "Pin thread", "keys": "shift+cmd+p", "level": "complete" },
+        { "id": "threads.copy-thread-reference", "title": "Copy thread reference", "keys": "shift+cmd+c", "level": "complete" },
+        { "id": "threads.undo", "title": "Undo thread action", "keys": "cmd+z", "level": "complete" }
+      ]
+    },
+    {
+      "id": "composer",
+      "title": "Composer",
+      "shortcuts": [
+        { "id": "composer.send-in-background", "title": "Send in background (new thread)", "keys": "cmd+enter", "level": "extended" },
+        { "id": "composer.send-and-new-thread", "title": "Send and start new thread", "keys": "cmd+alt+enter", "level": "extended" },
+        { "id": "composer.steer-queued-message", "title": "Steer with queued message", "keys": "shift+cmd+enter", "level": "complete" },
+        { "id": "composer.edit-queued-message", "title": "Edit queued message", "keys": "alt+up", "level": "complete" },
+        { "id": "composer.model-picker", "title": "Model picker", "keys": "shift+cmd+m", "level": "core" },
+        { "id": "composer.previous-next-provider", "title": "Previous / next provider (in model picker)", "keys": "shift+cmd+up or shift+cmd+down", "level": "extended" },
+        { "id": "composer.mode", "title": "Mode", "keys": "shift+cmd+a", "level": "extended" },
+        { "id": "composer.effort", "title": "Effort", "keys": "shift+cmd+e", "level": "extended" },
+        { "id": "composer.host", "title": "Host", "keys": "shift+cmd+h", "level": "complete" },
+        { "id": "composer.workspace", "title": "Workspace", "keys": "shift+cmd+x", "level": "complete" },
+        { "id": "composer.branch", "title": "Branch", "keys": "shift+cmd+g", "level": "complete" },
+        { "id": "composer.stash", "title": "Stash draft", "keys": "cmd+s", "level": "complete" },
+        { "id": "composer.dictation", "title": "Dictation", "keys": "shift+cmd+d", "level": "complete" }
+      ]
+    },
+    {
+      "id": "go-to",
+      "title": "Go to",
+      "shortcuts": [
+        { "id": "go-to.command-palette", "title": "Command palette", "keys": "cmd+k", "level": "core" },
+        { "id": "go-to.file-picker", "title": "File picker", "keys": "cmd+p", "level": "core" },
+        { "id": "go-to.search-project", "title": "Search project", "keys": "shift+cmd+f", "level": "extended" },
+        { "id": "go-to.open-in-editor", "title": "Open in favorite editor", "keys": "cmd+o", "level": "extended" },
+        { "id": "go-to.usage", "title": "Usage", "keys": "cmd+u", "level": "complete" },
+        { "id": "go-to.theme", "title": "Theme", "keys": "cmd+alt+a", "level": "complete" },
+        { "id": "go-to.cycle-appearance", "title": "Cycle light / dark", "keys": "shift+cmd+alt+a", "level": "complete" }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal (focused)",
+      "level": "extended",
+      "shortcuts": [
+        { "id": "terminal.new", "title": "New terminal", "keys": "cmd+n" },
+        { "id": "terminal.split", "title": "Split", "keys": "cmd+d" },
+        { "id": "terminal.split-vertical", "title": "Split vertically", "keys": "shift+cmd+d" },
+        { "id": "terminal.close", "title": "Close terminal", "keys": "cmd+w" }
+      ]
+    }
+  ]
+}

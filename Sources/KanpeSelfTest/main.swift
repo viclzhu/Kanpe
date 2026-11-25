@@ -54,6 +54,11 @@ check(SiteMatcher.matches(pattern: "google.com/maps", url: URL(string: "https://
 check(SiteMatcher.matches(pattern: "google.com/maps", url: URL(string: "https://www.google.com/search")!), false, "path mismatch")
 check(SiteMatcher.matches(pattern: "github.com", url: URL(string: "about:blank")!), false, "no host")
 check(SiteMatcher.normalizedHost(gh), "github.com", "normalized host")
+check(SiteMatcher.matches(pattern: "app:com.t3tools.t3code", bundleID: "com.t3tools.T3Code"), true, "app pattern, any case")
+check(SiteMatcher.matches(pattern: "app:com.t3tools.t3code", bundleID: "com.t3tools.t3code.helper"), false, "app pattern is exact")
+check(SiteMatcher.matches(pattern: "github.com", bundleID: "github.com"), false, "host pattern never matches an app")
+check(SiteMatcher.matches(pattern: "app:com.github", url: URL(string: "https://com.github/")!), false, "app pattern never matches a URL")
+check(SiteMatcher.matches(pattern: "app:", bundleID: ""), false, "empty app pattern")
 
 // MARK: Layout
 func g(_ title: String, _ rows: Int, _ source: ShortcutGroup.Source = .app) -> ShortcutGroup {
@@ -418,6 +423,8 @@ for pack in loaded.packs {
 check(SiteMatcher.packs(for: gh, in: loaded.packs).map(\.name), ["GitHub"], "GitHub pack matches github.com")
 check(SiteMatcher.packs(for: URL(string: "https://www.figma.com/design/abc/Untitled")!, in: loaded.packs).map(\.name), ["Figma"], "Figma pack matches figma.com")
 check(SiteMatcher.packs(for: URL(string: "https://calendar.google.com/calendar/u/0/r/week")!, in: loaded.packs).map(\.name), ["Google Calendar"], "Google Calendar pack matches calendar.google.com")
+check(SiteMatcher.packs(forApp: "com.t3tools.t3code", url: nil, in: loaded.packs).map(\.name), ["T3 Code"], "T3 Code pack matches its app")
+check(SiteMatcher.packs(forApp: "com.google.Chrome", url: gh, in: loaded.packs).map(\.name), ["GitHub"], "browser still matches by URL")
 if let cal = loaded.packs.first(where: { $0.name == "Google Calendar" }) {
     for path in ["/calendar/u/0/r/eventedit", "/calendar/u/1/r/eventedit/abc123", "/calendar/r/eventedit"] {
         check((cal.pages ?? []).contains { p in p.paths.contains { PathPattern.matches($0, path: path) } }, true, "Calendar event details page matches \(path)")

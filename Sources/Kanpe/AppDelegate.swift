@@ -131,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func render() {
         guard let shown else { return }
         let bundleID = shown.app.bundleIdentifier
-        let matched = shown.url.map { SiteMatcher.packs(for: $0, in: packs) } ?? []
+        let matched = SiteMatcher.packs(forApp: bundleID, url: shown.url, in: packs)
         let menusVisible = showsAppMenus(for: bundleID)
         let appLevel = level(forApp: bundleID)
         let menus = MenuLevels.filter(shown.menus, level: appLevel)
@@ -160,14 +160,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - App menu shortcuts (shown/hidden per app)
 
-    /// Browsers start with their own menu shortcuts hidden (they're the same on every site);
-    /// other apps start with them shown. Either can be toggled from the panel.
+    /// Browsers start with their own menu shortcuts hidden (they're the same on every site), and
+    /// so do apps with their own pack (`app:` match), whose menus are usually generic Electron ones.
+    /// Other apps start with them shown. Either can be toggled from the panel.
     private func showsAppMenus(for bundleID: String?) -> Bool {
         guard let bundleID else { return true }
         if let stored = (defaults.dictionary(forKey: "appMenusVisible") as? [String: Bool])?[bundleID] {
             return stored
         }
-        return !BrowserURLReader.isBrowser(bundleID)
+        let hasAppPack = !SiteMatcher.packs(forApp: bundleID, url: nil, in: packs).isEmpty
+        return !BrowserURLReader.isBrowser(bundleID) && !hasAppPack
     }
 
     private func toggleAppMenus() {

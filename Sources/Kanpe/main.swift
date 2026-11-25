@@ -18,7 +18,7 @@ if let flag = args.firstIndex(of: "--render"), args.count > flag + 2 {
     // Optional: --level core|extended|complete (default: Core)
     let level = args.firstIndex(of: "--level").flatMap { args.count > $0 + 1 ? DetailLevel(rawValue: args[$0 + 1]) : nil } ?? .default
     let loaded = SitePackStore.app.load().loaded
-    let matched = url.map { SiteMatcher.packs(for: $0, in: loaded.map(\.pack)) } ?? []
+    let matched = SiteMatcher.packs(forApp: bundleID, url: url, in: loaded.map(\.pack))
     let content = PanelContent(appName: target.localizedName ?? bundleID, bundleID: bundleID,
                                host: url.flatMap(SiteMatcher.normalizedHost),
                                sites: matched.map { pack in
@@ -99,10 +99,8 @@ if let flag = args.firstIndex(of: "--dump"), args.count > flag + 1 {
         print("Tab host via AppleScript: \(url.flatMap(SiteMatcher.normalizedHost) ?? "none")")
     }
     var groups = MenuReader.groups(pid: pid)
-    if let url {
-        let packs = SitePackStore.app.load().packs
-        groups = SiteMatcher.packs(for: url, in: packs).flatMap { $0.displayGroups() } + groups
-    }
+    let packs = SitePackStore.app.load().packs
+    groups = SiteMatcher.packs(forApp: bundleID, url: url, in: packs).flatMap { $0.displayGroups() } + groups
     for group in groups {
         print("\n[\(group.source.rawValue)] \(group.title)")
         for s in group.shortcuts {

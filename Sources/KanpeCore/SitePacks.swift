@@ -32,7 +32,9 @@ public enum DetailLevel: String, Codable, CaseIterable, Comparable, Sendable {
 ///     }
 ///
 /// `match` entries are hosts (subdomains match too: "github.com" matches "www.github.com"),
-/// optionally followed by a path prefix: "google.com/maps".
+/// optionally followed by a path prefix: "google.com/maps". An entry `app:<bundle id>`
+/// ("app:com.t3tools.t3code") matches an app instead, for apps whose shortcuts aren't in their
+/// menus (Electron apps, mostly). Pages only apply to URLs, so an app pack shows all its groups.
 ///
 /// `level` ("core" | "extended" | "complete") is the lowest detail level at which a shortcut
 /// appears. It can be set on a group (applies to all its shortcuts) and overridden per shortcut.
@@ -188,8 +190,23 @@ public enum SiteMatcher {
         return host
     }
 
+    /// Prefix of `match` entries that name an app by bundle id.
+    public static let appPrefix = "app:"
+
+    /// The bundle id in an `app:` entry, or nil for a host entry.
+    public static func appBundleID(inPattern rawPattern: String) -> String? {
+        let pattern = rawPattern.trimmingCharacters(in: .whitespaces)
+        guard pattern.lowercased().hasPrefix(appPrefix) else { return nil }
+        let id = pattern.dropFirst(appPrefix.count).trimmingCharacters(in: .whitespaces)
+        return id.isEmpty ? nil : id
+    }
+
+    public static func matches(pattern: String, bundleID: String) -> Bool {
+        appBundleID(inPattern: pattern)?.caseInsensitiveCompare(bundleID) == .orderedSame
+    }
+
     public static func matches(pattern rawPattern: String, url: URL) -> Bool {
-        guard let host = normalizedHost(url) else { return false }
+        guard let host = normalizedHost(url), appBundleID(inPattern: rawPattern) == nil else { return false }
         var pattern = rawPattern.lowercased().trimmingCharacters(in: .whitespaces)
         for scheme in ["https://", "http://"] where pattern.hasPrefix(scheme) {
             pattern.removeFirst(scheme.count)
@@ -222,6 +239,16 @@ public enum SiteMatcher {
 
     public static func packs(for url: URL, in packs: [SitePack]) -> [SitePack] {
         packs.filter { pack in pack.match.contains { matches(pattern: $0, url: url) } }
+    }
+
+    /// Packs for the front app: those naming it with `app:`, then those matching its tab's URL.
+    public static func packs(forApp bundleID: String?, url: URL?, in packs: [SitePack]) -> [SitePack] {
+        packs.filter { pack in
+            pack.match.contains { pattern in
+                (bundleID.map { matches(pattern: pattern, bundleID: $0) } ?? false)
+                    || (url.map { matches(pattern: pattern, url: $0) } ?? false)
+            }
+        }
     }
 }
 

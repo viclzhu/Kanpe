@@ -7,9 +7,9 @@ The name comes from カンペ (*kanpe*), Japanese TV slang for the cue cards hel
 Press `⌘` twice and keep holding (or, if you prefer, just hold `⌘`; choose under menu-bar icon → **Trigger**) and a panel appears with:
 
 1. **Site shortcuts** for the active tab (GitHub, Gmail, Google Calendar, YouTube, Figma… or any site you add), highlighted at the top.
-2. **App shortcuts** read live from the frontmost app's menu bar.
+2. **App shortcuts** read live from the frontmost app's menu bar, plus a built-in pack for apps that keep their shortcuts out of the menus (T3 Code: side chat, panels, threads…).
 
-In browsers the app's own menu shortcuts (File, Edit, View…) start **hidden**, because they're the same on every site, so the panel shows just the site's shortcuts. Click **Menus** in the panel header to show or hide them; the choice is remembered per app. Other apps show their menu shortcuts by default.
+In browsers the app's own menu shortcuts (File, Edit, View…) start **hidden**, because they're the same on every site, so the panel shows just the site's shortcuts. Click **Menus** in the panel header to show or hide them; the choice is remembered per app. So do apps with a built-in pack, such as T3 Code. Other apps show their menu shortcuts by default.
 
 Release `⌘` (or press any key) to dismiss it. Shortcuts you type with `⌘` (⌘C, ⌘Tab, ⌘-click…) never trigger it.
 
@@ -198,7 +198,7 @@ A pack of your own with the same file name as a built-in one (e.g. your own `git
 
 **`updated`** (optional, `YYYY-MM-DD`) is when the pack's shortcuts were last checked or changed. Hover over the site chip in the panel header (`github.com › Code`) to see it, e.g. "GitHub shortcuts updated Nov 11, 2026 (8 days ago)". The editor shows it under the site name and sets it to today whenever you edit the site. Packs without it show the file's modification date.
 
-**`match`** takes hosts. Subdomains also match, so `github.com` matches `gist.github.com`, and a leading `www.` is ignored. You can add a path prefix (`google.com/maps`) or a wildcard (`*.atlassian.net`).
+**`match`** takes hosts. Subdomains also match, so `github.com` matches `gist.github.com`, and a leading `www.` is ignored. You can add a path prefix (`google.com/maps`) or a wildcard (`*.atlassian.net`). An entry `app:<bundle id>` (`app:com.t3tools.t3code`) matches an app instead of a site, for apps whose in-app shortcuts aren't in their menu bar. Find an app's bundle id with `osascript -e 'id of app "T3 Code (Beta)"'`. App packs have no pages, so all their groups show.
 
 **`keys` notation:**
 - Separate chords with spaces for a sequence: `g i` means "G then I".
